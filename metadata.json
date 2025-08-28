@@ -1,0 +1,6 @@
+{
+  "name": "Yo-Jitsu Kanri Dashboard",
+  "description": "A dashboard for managing sales performance against budgets (Yo-Jitsu Kanri). It allows users to view key performance indicators, track sales trends, manage affiliate programs, and set budgets by category.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}

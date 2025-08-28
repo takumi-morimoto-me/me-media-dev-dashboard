@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>予実管理ダッシュボード</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter var', 'sans-serif'],
+            },
+            colors: {
+              background: '#fffaf5',
+              foreground: '#190e00',
+              dark: {
+                background: '#190e00',
+                foreground: '#fffaf5',
+              },
+              primary: {
+                '50': '#fff8f0',
+                '100': '#fff1e0',
+                '200': '#ffe3c2',
+                '300': '#ffd5a3',
+                '400': '#ffc785',
+                '500': '#ffb966',
+                '600': '#f08301',
+                '700': '#d97701',
+                '800': '#b56401',
+                '900': '#965201',
+                '950': '#542b00'
+              }
+            }
+          },
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.1",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
+    "react/": "https://esm.sh/react@^19.1.1/",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.7.1",
+    "recharts": "https://esm.sh/recharts@^3.1.0"
+  }
+}
+</script>
+</head>
+  <body class="bg-background text-foreground dark:bg-dark-background dark:text-dark-foreground transition-colors duration-300">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
