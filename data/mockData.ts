@@ -1,4 +1,4 @@
-import { Program, MediaBudget } from '../types';
+import { Program, MediaBudget, BotStatus } from '../types';
 import { salesBudgetItems } from './budgetMockData';
 
 export const CATEGORIES = ['健康食品', '金融', '美容', 'エンタメ', '教育'];
@@ -6,13 +6,13 @@ export const ASP_NAMES = ['A8.net', 'ValueCommerce', 'afb', 'ACCESSTRADE', 'Link
 export const MEDIA_NAMES = ['ビギナーズ', '最安修理', 'Mortorz'];
 
 export const mockPrograms: Program[] = [
-  { id: 1, aspName: 'A8.net', programName: 'スーパー青汁', category: '健康食品', status: '有効' },
-  { id: 2, aspName: 'ValueCommerce', programName: 'ABCカード', category: '金融', status: '有効' },
-  { id: 3, aspName: 'afb', programName: 'キラキラコスメ', category: '美容', status: '無効' },
-  { id: 4, aspName: 'ACCESSTRADE', programName: 'オンラインゲームX', category: 'エンタメ', status: '有効' },
-  { id: 5, aspName: 'A8.net', programName: 'プログラミングスクール', category: '教育', status: '有効' },
-  { id: 6, aspName: 'afb', programName: '健康サプリメントZ', category: '健康食品', status: '有効' },
-    { id: 7, aspName: 'ValueCommerce', programName: 'ビューティーセラム', category: '美容', status: '有効' },
+  { id: 1, aspName: 'A8.net', programName: 'スーパー青汁', category: '健康食品', status: '有効', assignedMedia: 'ビギナーズ' },
+  { id: 2, aspName: 'ValueCommerce', programName: 'ABCカード', category: '金融', status: '有効', assignedMedia: 'ビギナーズ' },
+  { id: 3, aspName: 'afb', programName: 'キラキラコスメ', category: '美容', status: '無効', assignedMedia: '最安修理' },
+  { id: 4, aspName: 'ACCESSTRADE', programName: 'オンラインゲームX', category: 'エンタメ', status: '有効', assignedMedia: 'Mortorz' },
+  { id: 5, aspName: 'A8.net', programName: 'プログラミングスクール', category: '教育', status: '有効', assignedMedia: '最安修理' },
+  { id: 6, aspName: 'afb', programName: '健康サプリメントZ', category: '健康食品', status: '有効', assignedMedia: 'ビギナーズ' },
+  { id: 7, aspName: 'ValueCommerce', programName: 'ビューティーセラム', category: '美容', status: '有効', assignedMedia: 'Mortorz' },
 ];
 
 export const mockDetailedMediaBudgets: MediaBudget[] = MEDIA_NAMES.map((mediaName, i) => {
@@ -23,6 +23,14 @@ export const mockDetailedMediaBudgets: MediaBudget[] = MEDIA_NAMES.map((mediaNam
     });
     return { mediaName, salesBudgets };
 });
+
+export const mockBotStatuses: BotStatus[] = [
+    { name: 'A8.net収集Bot', lastRun: '2025-08-29 08:05:12', status: '成功' },
+    { name: 'ValueCommerce収集Bot', lastRun: '2025-08-29 08:07:31', status: '成功' },
+    { name: 'afb収集Bot', lastRun: '2025-08-29 08:09:02', status: '失敗' },
+    { name: '日次集計Bot', lastRun: '2025-08-29 09:00:45', status: '成功' },
+    { name: '月次レポート生成Bot', lastRun: '2025-08-28 18:00:00', status: '成功' },
+];
 
 
 // Helper function to generate dynamic sales data for demonstration

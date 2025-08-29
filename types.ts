@@ -23,7 +23,7 @@ export interface PerformanceByCategory {
 }
 
 export interface PerformanceByAsp {
-  aspName: string;
+  aspName:string;
   sales: number;
   cost: number;
   profit: number;
@@ -44,6 +44,7 @@ export interface Program {
   programName: string;
   category: string;
   status: '有効' | '無効';
+  assignedMedia?: string;
 }
 
 export interface MediaBudget {
@@ -68,3 +69,19 @@ export type DailyBudgetData = {
 export type MonthlyBudgetData = {
   [month: number]: DailyBudgetData;
 };
+
+// --- New Types for Settings Page ---
+export type Role = '管理者' | '事業部責任者' | '部門責任者';
+
+export interface User {
+  id: number;
+  email: string;
+  role: Role;
+  assignedMedia?: string[];
+}
+
+export interface BotStatus {
+  name: string;
+  lastRun: string;
+  status: '成功' | '失敗';
+}

@@ -6,26 +6,60 @@ import MediaDashboardPage from './pages/MediaDashboardPage';
 import ProgramsPage from './pages/ProgramsPage';
 import BudgetsPage from './pages/BudgetsPage';
 import ResultsPage from './pages/ResultsPage';
+import SettingsPage from './pages/SettingsPage';
 import Header from './components/Header';
-import { MediaBudget } from './types';
-import { mockDetailedMediaBudgets, MEDIA_NAMES } from './data/mockData';
-import { salesBudgetItems } from './data/budgetMockData';
+import { MediaBudget, User, BudgetItem, Program } from './types';
+import { mockDetailedMediaBudgets, MEDIA_NAMES, mockPrograms } from './data/mockData';
+import { initialBudgetItems } from './data/budgetMockData';
+import { mockUsers } from './data/userData';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // --- Global State Management ---
+  const [theme, setTheme] = useState('light');
+  
+  // Settings: Basic
+  const [fiscalYearStartMonth, setFiscalYearStartMonth] = useState<number>(4);
+  const [currentFiscalPeriod, setCurrentFiscalPeriod] = useState<number>(20); // e.g. 20th period
+  const [users, setUsers] = useState<User[]>(mockUsers);
+  
+  // Settings: Master Data
   const [mediaNames, setMediaNames] = useState<string[]>(MEDIA_NAMES);
+  const [mediaBudgetItems, setMediaBudgetItems] = useState<{ [mediaName: string]: BudgetItem[] }>(() => {
+    const initialItems: { [mediaName: string]: BudgetItem[] } = {};
+    MEDIA_NAMES.forEach(name => {
+      initialItems[name] = JSON.parse(JSON.stringify(initialBudgetItems));
+    });
+    return initialItems;
+  });
+  const [programs, setPrograms] = useState<Program[]>(mockPrograms);
+
+  // Settings: Automation
+  const [notificationSettings, setNotificationSettings] = useState({ error_notification_to: '' });
+
+  // Dashboard Data (remains as mock)
   const [budgets, setBudgets] = useState<MediaBudget[]>(() => 
     JSON.parse(JSON.stringify(mockDetailedMediaBudgets))
   );
-  const [theme, setTheme] = useState('light');
 
   useEffect(() => {
+    // Load settings from localStorage
     const storedTheme = localStorage.getItem('theme');
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     if (storedTheme) {
         setTheme(storedTheme);
     } else {
         setTheme(systemPrefersDark ? 'dark' : 'light');
+    }
+    
+    const storedMonth = localStorage.getItem('fiscalYearStartMonth');
+    if (storedMonth) {
+        setFiscalYearStartMonth(parseInt(storedMonth, 10));
+    }
+    const storedPeriod = localStorage.getItem('currentFiscalPeriod');
+    if (storedPeriod) {
+        setCurrentFiscalPeriod(parseInt(storedPeriod, 10));
     }
   }, []);
 
@@ -39,6 +73,16 @@ function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  const handleFiscalYearStartMonthChange = (month: number) => {
+    setFiscalYearStartMonth(month);
+    localStorage.setItem('fiscalYearStartMonth', month.toString());
+  };
+
+  const handleCurrentFiscalPeriodChange = (period: number) => {
+    setCurrentFiscalPeriod(period);
+    localStorage.setItem('currentFiscalPeriod', period.toString());
+  };
+
   const toggleTheme = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
@@ -51,31 +95,6 @@ function App() {
     setIsAuthenticated(false);
   }, []);
 
-  const handleAddMedia = (newMediaName: string) => {
-    const trimmedName = newMediaName.trim();
-    if (!trimmedName) {
-        alert('ダッシュボード名を入力してください。');
-        return;
-    }
-    if (mediaNames.includes(trimmedName)) {
-        alert('その名前のダッシュボードは既に存在します。');
-        return;
-    }
-
-    setMediaNames(prev => [...prev, trimmedName]);
-    
-    const newSalesBudgets: Record<string, number> = {};
-    salesBudgetItems.forEach((item, j) => {
-        const budget = Math.round(((150000) * (1 / (j + 2))) * (0.8 + Math.random() * 0.4) / 1000) * 1000;
-        newSalesBudgets[item.id] = budget > 10000 ? budget : 10000;
-    });
-
-    const newMediaBudget: MediaBudget = { mediaName: trimmedName, salesBudgets: newSalesBudgets };
-
-    setBudgets(prev => [...prev, newMediaBudget]);
-  };
-
-
   return (
     <HashRouter>
       {!isAuthenticated ? (
@@ -85,14 +104,50 @@ function App() {
         </Routes>
       ) : (
         <div className="min-h-screen flex flex-col">
-          <Header onLogout={handleLogout} theme={theme} toggleTheme={toggleTheme} mediaNames={mediaNames} onAddMedia={handleAddMedia} />
+          <Header onLogout={handleLogout} theme={theme} toggleTheme={toggleTheme} mediaNames={mediaNames} />
           <main className="flex-grow p-4 sm:p-6 lg:p-8">
             <Routes>
               <Route path="/" element={<DashboardPage budgets={budgets} />} />
               <Route path="/media/:mediaName" element={<MediaDashboardPage budgets={budgets} setBudgets={setBudgets} />} />
-              <Route path="/programs" element={<ProgramsPage />} />
-              <Route path="/budgets" element={<BudgetsPage mediaNames={mediaNames} />} />
-              <Route path="/results" element={<ResultsPage mediaNames={mediaNames} />} />
+              <Route path="/programs" element={<ProgramsPage programs={programs} setPrograms={setPrograms}/>} />
+              <Route 
+                path="/budgets" 
+                element={<BudgetsPage 
+                  mediaNames={mediaNames} 
+                  fiscalYearStartMonth={fiscalYearStartMonth} 
+                  mediaBudgetItems={mediaBudgetItems}
+                />} 
+              />
+              <Route 
+                path="/results" 
+                element={<ResultsPage 
+                  mediaNames={mediaNames} 
+                  fiscalYearStartMonth={fiscalYearStartMonth} 
+                  mediaBudgetItems={mediaBudgetItems}
+                />} 
+              />
+              <Route 
+                path="/settings" 
+                element={<SettingsPage 
+                  // Basic Settings
+                  fiscalYearStartMonth={fiscalYearStartMonth}
+                  onFiscalYearStartMonthChange={handleFiscalYearStartMonthChange}
+                  currentFiscalPeriod={currentFiscalPeriod}
+                  onCurrentFiscalPeriodChange={handleCurrentFiscalPeriodChange}
+                  users={users}
+                  setUsers={setUsers}
+                  // Master Data
+                  mediaNames={mediaNames}
+                  setMediaNames={setMediaNames}
+                  mediaBudgetItems={mediaBudgetItems}
+                  setMediaBudgetItems={setMediaBudgetItems}
+                  programs={programs}
+                  setPrograms={setPrograms}
+                  // Automation
+                  notificationSettings={notificationSettings}
+                  setNotificationSettings={setNotificationSettings}
+                />} 
+              />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>

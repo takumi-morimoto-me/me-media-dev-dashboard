@@ -1,12 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { Program } from '../types';
-import { mockPrograms, ASP_NAMES, CATEGORIES } from '../data/mockData';
+import { ASP_NAMES, CATEGORIES } from '../data/mockData';
 import ProgramFormModal from '../components/ProgramFormModal';
 import { EditIcon, TrashIcon } from '../components/icons';
 import Card from '../components/Card';
 
-const ProgramsPage: React.FC = () => {
-  const [programs, setPrograms] = useState<Program[]>(mockPrograms);
+interface ProgramsPageProps {
+  programs: Program[];
+  setPrograms: React.Dispatch<React.SetStateAction<Program[]>>;
+}
+
+const ProgramsPage: React.FC<ProgramsPageProps> = ({ programs, setPrograms }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [programToEdit, setProgramToEdit] = useState<Program | null>(null);
   
@@ -43,7 +47,7 @@ const ProgramsPage: React.FC = () => {
     if (index > -1) {
       setPrograms(programs.map(p => p.id === program.id ? program : p));
     } else {
-      setPrograms([...programs, program]);
+      setPrograms([...programs, { ...program, id: Date.now() }]);
     }
     setIsModalOpen(false);
   };
