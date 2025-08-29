@@ -3,6 +3,8 @@ import { DailyBudgetData, BudgetItem, MonthlyBudgetData } from '../types';
 import { getBudgetData, saveBudgetData } from '../data/budgetMockData';
 import Card from '../components/Card';
 import { CheckCircleIcon, ExclamationCircleIcon, InformationCircleIcon, UploadIcon, LinkIcon } from '../components/icons';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
 
 type Granularity = '月次' | '日次';
 
@@ -61,7 +63,9 @@ const BudgetsPage: React.FC<BudgetsPageProps> = ({ mediaNames, fiscalYearStartMo
 
   const [budgetData, setBudgetData] = useState<DailyBudgetData | null>(null);
   const [yearlyBudgetData, setYearlyBudgetData] = useState<MonthlyBudgetData | null>(null);
-  
+  const [previousBudgetData, setPreviousBudgetData] = useState<DailyBudgetData | null>(null);
+  const [previousYearlyBudgetData, setPreviousYearlyBudgetData] = useState<MonthlyBudgetData | null>(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<Record<string, 'saving' | 'saved' | 'error'>>({});
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -85,22 +89,37 @@ const BudgetsPage: React.FC<BudgetsPageProps> = ({ mediaNames, fiscalYearStartMo
     if (granularity === '月次') {
         const fetchYearlyData = async () => {
             try {
-                const allMonthsData: MonthlyBudgetData = {};
                 const monthsToFetch = getMonthsForFiscalYear(fiscalYearStartMonth);
                 
-                const promises = monthsToFetch.map(monthNum => {
+                const currentPeriodPromises = monthsToFetch.map(monthNum => {
                     const { year: calendarYear, month: calendarMonth } = getCalendarDateForFiscalMonth(selectedFiscalPeriod, monthNum, fiscalYearStartMonth);
                     return getBudgetData(selectedMedia, calendarYear, calendarMonth);
                 });
 
-                const results = await Promise.all(promises);
-                
-                monthsToFetch.forEach((monthNum, index) => {
-                    allMonthsData[monthNum] = results[index];
+                const previousPeriodPromises = monthsToFetch.map(monthNum => {
+                    const { year: calendarYear, month: calendarMonth } = getCalendarDateForFiscalMonth(selectedFiscalPeriod - 1, monthNum, fiscalYearStartMonth);
+                    return getBudgetData(selectedMedia, calendarYear, calendarMonth);
                 });
 
+                const [currentResults, previousResults] = await Promise.all([
+                    Promise.all(currentPeriodPromises),
+                    Promise.all(previousPeriodPromises)
+                ]);
+
+                const allMonthsData: MonthlyBudgetData = {};
+                monthsToFetch.forEach((monthNum, index) => {
+                    allMonthsData[monthNum] = currentResults[index];
+                });
                 setYearlyBudgetData(allMonthsData);
+
+                const allPreviousMonthsData: MonthlyBudgetData = {};
+                monthsToFetch.forEach((monthNum, index) => {
+                    allPreviousMonthsData[monthNum] = previousResults[index];
+                });
+                setPreviousYearlyBudgetData(allPreviousMonthsData);
+
                 setBudgetData(null);
+                setPreviousBudgetData(null);
             } catch (error) {
                 console.error("Failed to fetch yearly budget data:", error);
                 setToast({ message: "年間データの読み込みに失敗しました。", type: 'error' });
@@ -114,9 +133,14 @@ const BudgetsPage: React.FC<BudgetsPageProps> = ({ mediaNames, fiscalYearStartMo
             try {
                 const year = targetDate.getFullYear();
                 const month = targetDate.getMonth() + 1;
-                const data = await getBudgetData(selectedMedia, year, month);
-                setBudgetData(data);
+                 const [currentData, previousData] = await Promise.all([
+                    getBudgetData(selectedMedia, year, month),
+                    getBudgetData(selectedMedia, year - 1, month)
+                ]);
+                setBudgetData(currentData);
+                setPreviousBudgetData(previousData);
                 setYearlyBudgetData(null);
+                setPreviousYearlyBudgetData(null);
             } catch (error) {
                 console.error("Failed to fetch budget data:", error);
                 setToast({ message: "データの読み込みに失敗しました。", type: 'error' });
@@ -268,12 +292,17 @@ const BudgetsPage: React.FC<BudgetsPageProps> = ({ mediaNames, fiscalYearStartMo
       return newCalculatedData;
   }, [flatItems, itemMap]);
 
+  const daysInMonth = useMemo(() => new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0).getDate(), [targetDate]);
 
   const calculatedDailyData = useMemo(() => {
     if (granularity !== '日次' || !budgetData) return null;
-    const daysInMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0).getDate();
     return calculateParentTotals(budgetData, daysInMonth);
-  }, [budgetData, granularity, targetDate, calculateParentTotals]);
+  }, [budgetData, granularity, targetDate, calculateParentTotals, daysInMonth]);
+
+  const calculatedPreviousDailyData = useMemo(() => {
+    if (granularity !== '日次' || !previousBudgetData) return null;
+    return calculateParentTotals(previousBudgetData, daysInMonth);
+  }, [previousBudgetData, granularity, targetDate, calculateParentTotals, daysInMonth]);
   
   const calculatedYearlyData = useMemo(() => {
     if (granularity !== '月次' || !yearlyBudgetData) return null;
@@ -290,8 +319,21 @@ const BudgetsPage: React.FC<BudgetsPageProps> = ({ mediaNames, fiscalYearStartMo
     return calculatedData;
   }, [yearlyBudgetData, granularity, fiscalYearStartMonth, calculateParentTotals, selectedFiscalPeriod]);
 
-  const daysInMonth = useMemo(() => new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0).getDate(), [targetDate]);
-  
+  const calculatedPreviousYearlyData = useMemo(() => {
+    if (granularity !== '月次' || !previousYearlyBudgetData) return null;
+    const calculatedData: MonthlyBudgetData = {};
+    const fiscalMonths = getMonthsForFiscalYear(fiscalYearStartMonth);
+    for (const month of fiscalMonths) {
+        const monthData = previousYearlyBudgetData[month];
+        if (monthData) {
+            const { year: calendarYear } = getCalendarDateForFiscalMonth(selectedFiscalPeriod - 1, month, fiscalYearStartMonth);
+            const daysInMonth = new Date(calendarYear, month, 0).getDate();
+            calculatedData[month] = calculateParentTotals(monthData, daysInMonth);
+        }
+    }
+    return calculatedData;
+  }, [previousYearlyBudgetData, granularity, fiscalYearStartMonth, calculateParentTotals, selectedFiscalPeriod]);
+
   const fiscalMonths = useMemo(() => getMonthsForFiscalYear(fiscalYearStartMonth), [fiscalYearStartMonth]);
 
   const periods = Array.from({length: 5}, (_, i) => getFiscalPeriod(new Date(), fiscalYearStartMonth) - 2 + i);
@@ -311,6 +353,32 @@ const BudgetsPage: React.FC<BudgetsPageProps> = ({ mediaNames, fiscalYearStartMo
       if (!data || !data[itemId]) return 0;
       return Object.values(data[itemId]).reduce((sum, val) => sum + val, 0);
   }
+
+  const calculateYoY = (current: number, previous: number) => {
+    if (previous === 0) {
+        return { text: '-', color: 'text-slate-400 dark:text-slate-500' };
+    }
+    const percentage = ((current - previous) / previous) * 100;
+    const color = percentage >= 0 ? 'text-green-500' : 'text-red-500';
+    const text = `${percentage >= 0 ? '+' : ''}${percentage.toFixed(1)}%`;
+    return { text, color };
+  };
+
+  const trendGraphData = useMemo(() => {
+    if (granularity !== '月次' || !calculatedYearlyData) return [];
+
+    const mainItems = budgetItems.filter(i => i.isHeader);
+
+    return fiscalMonths.map(month => {
+        const monthData: { name: string; [key: string]: string | number } = {
+            name: `${month}月`,
+        };
+        mainItems.forEach(item => {
+            monthData[item.name] = getMonthTotal(calculatedYearlyData[month], item.id);
+        });
+        return monthData;
+    });
+  }, [granularity, calculatedYearlyData, fiscalMonths, budgetItems]);
 
   return (
     <div className="space-y-6">
@@ -373,6 +441,32 @@ const BudgetsPage: React.FC<BudgetsPageProps> = ({ mediaNames, fiscalYearStartMo
          )}
       </Card>
       
+      {granularity === '月次' && !isLoading && (
+        <Card title="今期のトレンドグラフ">
+            <div className="w-full h-72">
+                <ResponsiveContainer>
+                    <LineChart data={trendGraphData}>
+                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+                        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                        <YAxis tickFormatter={(val) => `${(val as number / 1000)}k`} tick={{ fontSize: 12 }} />
+                        <Tooltip 
+                            contentStyle={{ 
+                                backgroundColor: 'rgba(30, 41, 59, 0.8)', 
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                color: '#fff'
+                            }}
+                            formatter={(value: number) => `${value.toLocaleString()}`} 
+                        />
+                        <Legend />
+                        {budgetItems.filter(i => i.isHeader).map((item, index) => (
+                            <Line key={item.id} type="monotone" dataKey={item.name} stroke={['#f08301', '#8884d8', '#82ca9d'][index % 3]} strokeWidth={2} />
+                        ))}
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
+        </Card>
+      )}
+
       <Card title="予算入力グリッド" >
         {isLoading ? (
           <div className="text-center p-8">データを読み込み中...</div>
@@ -390,61 +484,88 @@ const BudgetsPage: React.FC<BudgetsPageProps> = ({ mediaNames, fiscalYearStartMo
                 </tr>
               </thead>
               <tbody>
-                {flatItems.map(item => (
-                  <tr key={item.id} className={item.isHeader ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-dark-background hover:bg-slate-50/50 dark:hover:bg-slate-700/50'}>
-                    <th className="sticky left-0 z-10 p-2 border border-slate-200 dark:border-white/10 text-left font-medium bg-inherit" style={{ paddingLeft: `${item.depth * 1.5 + 0.5}rem` }}>
-                      {item.name}
-                    </th>
-                    <td className="sticky left-[200px] z-10 p-2 border border-slate-200 dark:border-white/10 text-right font-semibold bg-inherit">
-                      {granularity === '月次' && (
-                        <span>
-                          {fiscalMonths.reduce((total, month) => {
-                            return total + getMonthTotal(calculatedYearlyData?.[month] ?? null, item.id);
-                          }, 0).toLocaleString()}
-                        </span>
-                      )}
-                      {granularity === '日次' && (
-                        <span>{getMonthTotal(calculatedDailyData, item.id).toLocaleString()}</span>
-                      )}
-                    </td>
-                    
-                    {granularity === '月次' && fiscalMonths.map(month => (
-                        <td key={month} className="p-0 border border-slate-200 dark:border-white/10 text-right">
-                            <div className="px-2 py-1.5">{getMonthTotal(calculatedYearlyData?.[month] ?? null, item.id).toLocaleString()}</div>
-                        </td>
-                    ))}
+                {flatItems.map(item => {
+                    let totalYoY = { text: '-', color: '' };
+                    if (granularity === '月次') {
+                        const currentTotal = fiscalMonths.reduce((total, month) => total + getMonthTotal(calculatedYearlyData?.[month] ?? null, item.id), 0);
+                        const previousTotal = fiscalMonths.reduce((total, month) => total + getMonthTotal(calculatedPreviousYearlyData?.[month] ?? null, item.id), 0);
+                        totalYoY = calculateYoY(currentTotal, previousTotal);
+                    } else {
+                        const currentTotal = getMonthTotal(calculatedDailyData, item.id);
+                        const previousTotal = getMonthTotal(calculatedPreviousDailyData, item.id);
+                        totalYoY = calculateYoY(currentTotal, previousTotal);
+                    }
 
-                    {granularity === '日次' && Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
-                      const cellKey = `${item.id}-${day}`;
-                      const status = saveStatus[cellKey];
-                      return (
-                        <td key={day} className="p-0 border border-slate-200 dark:border-white/10 text-right">
-                          {item.isEditable ? (
-                            <div className="relative">
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                value={getDayValue(budgetData, item.id, day).toLocaleString()}
-                                onChange={e => handleBudgetChange(item.id, day, e.target.value.replace(/,/g, ''))}
-                                onBlur={() => handleSave(item.id, day)}
-                                onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                                className="w-full h-full text-right px-2 py-1.5 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                              />
-                               <div className="absolute top-1/2 right-2 transform -translate-y-1/2">
-                                {status === 'saving' && <InformationCircleIcon className="w-4 h-4 text-blue-500 animate-spin" />}
-                                {status === 'saved' && <CheckCircleIcon className="w-4 h-4 text-green-500" />}
-                                {status === 'error' && <ExclamationCircleIcon className="w-4 h-4 text-red-500" />}
-                              </div>
+                    return (
+                    <tr key={item.id} className={item.isHeader ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-dark-background hover:bg-slate-50/50 dark:hover:bg-slate-700/50'}>
+                        <th className="sticky left-0 z-10 p-2 border border-slate-200 dark:border-white/10 text-left font-medium bg-inherit" style={{ paddingLeft: `${item.depth * 1.5 + 0.5}rem` }}>
+                        {item.name}
+                        </th>
+                        <td className="sticky left-[200px] z-10 p-0 border border-slate-200 dark:border-white/10 text-right font-semibold bg-inherit">
+                            <div className="px-2 py-1.5 flex flex-col items-end">
+                                <span>
+                                {granularity === '月次' ? fiscalMonths.reduce((total, month) => total + getMonthTotal(calculatedYearlyData?.[month] ?? null, item.id), 0).toLocaleString() : getMonthTotal(calculatedDailyData, item.id).toLocaleString()}
+                                </span>
+                                <span className={`text-xs ${totalYoY.color}`}>{totalYoY.text}</span>
                             </div>
-                          ) : (
-                            <div className="px-2 py-1.5">{getDayValue(calculatedDailyData, item.id, day).toLocaleString()}</div>
-                          )}
                         </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+                        
+                        {granularity === '月次' && fiscalMonths.map(month => {
+                            const currentValue = getMonthTotal(calculatedYearlyData?.[month] ?? null, item.id);
+                            const previousValue = getMonthTotal(calculatedPreviousYearlyData?.[month] ?? null, item.id);
+                            const yoy = calculateYoY(currentValue, previousValue);
+                            return (
+                                <td key={month} className="p-0 border border-slate-200 dark:border-white/10 text-right">
+                                    <div className="px-2 py-1.5 flex flex-col items-end">
+                                        <span>{currentValue.toLocaleString()}</span>
+                                        <span className={`text-xs ${yoy.color}`}>{yoy.text}</span>
+                                    </div>
+                                </td>
+                            );
+                        })}
+
+                        {granularity === '日次' && Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
+                        const cellKey = `${item.id}-${day}`;
+                        const status = saveStatus[cellKey];
+                        const currentValue = getDayValue(item.isEditable ? budgetData : calculatedDailyData, item.id, day);
+                        const previousValue = getDayValue(item.isEditable ? previousBudgetData : calculatedPreviousDailyData, item.id, day);
+                        const yoy = calculateYoY(currentValue, previousValue);
+
+                        return (
+                            <td key={day} className="p-0 border border-slate-200 dark:border-white/10 text-right align-top">
+                            {item.isEditable ? (
+                                <div className="py-0.5 px-2 h-full flex flex-col justify-between">
+                                <div className="relative">
+                                    <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={getDayValue(budgetData, item.id, day).toLocaleString()}
+                                    onChange={e => handleBudgetChange(item.id, day, e.target.value.replace(/,/g, ''))}
+                                    onBlur={() => handleSave(item.id, day)}
+                                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                                    className="w-full text-right px-2 py-1 bg-transparent focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-sm"
+                                    />
+                                    <div className="absolute top-1/2 right-2 transform -translate-y-1/2">
+                                        {status === 'saving' && <InformationCircleIcon className="w-4 h-4 text-blue-500 animate-spin" />}
+                                        {status === 'saved' && <CheckCircleIcon className="w-4 h-4 text-green-500" />}
+                                        {status === 'error' && <ExclamationCircleIcon className="w-4 h-4 text-red-500" />}
+                                    </div>
+                                </div>
+                                <div className={`text-xs text-right ${yoy.color}`}>{yoy.text}</div>
+                                </div>
+                            ) : (
+                                <div className="px-2 py-1.5 flex flex-col items-end">
+                                    <span>{currentValue.toLocaleString()}</span>
+                                    <span className={`text-xs ${yoy.color}`}>{yoy.text}</span>
+                                </div>
+                            )}
+                            </td>
+                        );
+                        })}
+                    </tr>
+                    );
+                })}
               </tbody>
             </table>
           </div>
