@@ -15,6 +15,12 @@ export interface SalesDataPoint {
   name: string;
   売上: number;
   予算?: number;
+  累計売上?: number;
+  累計予算?: number;
+  '前月売上'?: number | null;
+  '前月累計売上'?: number;
+  '前期売上'?: number | null;
+  '前期累計売上'?: number;
 }
 
 export interface PerformanceByCategory {

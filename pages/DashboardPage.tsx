@@ -10,6 +10,34 @@ interface DashboardPageProps {
     budgets: MediaBudget[];
 }
 
+type LineVisibility = {
+    '売上': boolean;
+    '累計売上': boolean;
+    '前月売上': boolean;
+    '前月累計売上': boolean;
+    '前期売上': boolean;
+    '前期累計売上': boolean;
+};
+
+const lineOptions: (keyof LineVisibility)[] = [
+    '売上',
+    '累計売上',
+    '前月売上',
+    '前月累計売上',
+    '前期売上',
+    '前期累計売上',
+];
+
+const lineColors: Record<keyof LineVisibility, string> = {
+    '売上': '#f08301',
+    '累計売上': '#82ca9d',
+    '前月売上': '#ffc658',
+    '前月累計売上': '#ff7300',
+    '前期売上': '#8884d8',
+    '前期累計売上': '#387908',
+};
+
+
 const KpiSummary: React.FC<{ data: KpiData }> = ({ data }) => {
     const formatCurrency = (value: number) => `¥${value.toLocaleString()}`;
     const formatPercentage = (value: number) => `${value.toFixed(1)}%`;
@@ -72,6 +100,14 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ budgets }) => {
     const [granularity, setGranularity] = useState<Granularity>(Granularity.MONTHLY);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedWeek, setSelectedWeek] = useState(1);
+    const [visibleLines, setVisibleLines] = useState<LineVisibility>({
+        '売上': true,
+        '累計売上': true,
+        '前月売上': false,
+        '前月累計売上': false,
+        '前期売上': false,
+        '前期累計売上': false,
+    });
 
     const previousMonthDate = useMemo(() => {
         const d = new Date(currentDate);
@@ -135,17 +171,27 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ budgets }) => {
                         achievementRate: dailyBudget > 0 ? (dayData.sales / dailyBudget) * 100 : 0
                     };
                     
-                    let cumulativeSales = 0;
-                    let cumulativeBudget = 0;
+                    let cumulativeSales = 0, cumulativeBudget = 0, cumulativePrevMonthSales = 0, cumulativePrevYearSales = 0;
                     graph = salesData.slice(Math.max(0, day - 7), day).map(d => {
+                        const dayOfMonth = d.date.getDate();
+                        const prevMonthDayData = prevMonthSalesData.find(p => p.date.getDate() === dayOfMonth);
+                        const prevYearDayData = prevYearSalesData.find(p => p.date.getDate() === dayOfMonth && p.date.getMonth() === d.date.getMonth());
+                        
                         cumulativeSales += d.sales;
                         cumulativeBudget += totalMonthlyBudget / daysInMonth;
+                        cumulativePrevMonthSales += prevMonthDayData?.sales || 0;
+                        cumulativePrevYearSales += prevYearDayData?.sales || 0;
+                        
                         return { 
                             name: `${d.date.getMonth() + 1}/${d.date.getDate()}`, 
                             '売上': d.sales, 
                             '予算': totalMonthlyBudget / daysInMonth,
                             '累計売上': cumulativeSales,
-                            '累計予算': cumulativeBudget
+                            '累計予算': cumulativeBudget,
+                            '前月売上': prevMonthDayData?.sales || null,
+                            '前月累計売上': cumulativePrevMonthSales,
+                            '前期売上': prevYearDayData?.sales || null,
+                            '前期累計売上': cumulativePrevYearSales,
                         };
                     });
                 }
@@ -163,17 +209,27 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ budgets }) => {
                     const weeklyBudget = (totalMonthlyBudget / daysInMonth) * numDaysInWeek;
                     kpi = { sales: totalSales, budget: weeklyBudget, difference: totalSales - weeklyBudget, achievementRate: weeklyBudget > 0 ? (totalSales / weeklyBudget) * 100 : 0 };
                     
-                    let cumulativeSales = 0;
-                    let cumulativeBudget = 0;
+                    let cumulativeSales = 0, cumulativeBudget = 0, cumulativePrevMonthSales = 0, cumulativePrevYearSales = 0;
                     graph = weekData.map(d => {
+                        const dayOfMonth = d.date.getDate();
+                        const prevMonthDayData = prevMonthSalesData.find(p => p.date.getDate() === dayOfMonth);
+                        const prevYearDayData = prevYearSalesData.find(p => p.date.getDate() === dayOfMonth && p.date.getMonth() === d.date.getMonth());
+                        
                         cumulativeSales += d.sales;
                         cumulativeBudget += totalMonthlyBudget / daysInMonth;
+                        cumulativePrevMonthSales += prevMonthDayData?.sales || 0;
+                        cumulativePrevYearSales += prevYearDayData?.sales || 0;
+
                         return { 
                             name: `${d.date.getMonth() + 1}/${d.date.getDate()}`, 
                             '売上': d.sales, 
                             '予算': totalMonthlyBudget / daysInMonth,
                             '累計売上': cumulativeSales,
-                            '累計予算': cumulativeBudget
+                            '累計予算': cumulativeBudget,
+                            '前月売上': prevMonthDayData?.sales || null,
+                            '前月累計売上': cumulativePrevMonthSales,
+                            '前期売上': prevYearDayData?.sales || null,
+                            '前期累計売上': cumulativePrevYearSales,
                         };
                     });
                 }
@@ -183,13 +239,24 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ budgets }) => {
                 const totalSales = salesData.reduce((sum, d) => sum + d.sales, 0);
                 kpi = { sales: totalSales, budget: totalMonthlyBudget, difference: totalSales - totalMonthlyBudget, achievementRate: totalMonthlyBudget > 0 ? (totalSales / totalMonthlyBudget) * 100 : 0 };
                 
-                let cumulativeSales = 0;
+                let cumulativeSales = 0, cumulativePrevMonthSales = 0, cumulativePrevYearSales = 0;
                 graph = salesData.map(d => {
+                    const dayOfMonth = d.date.getDate();
+                    const prevMonthDayData = prevMonthSalesData.find(p => p.date.getDate() === dayOfMonth);
+                    const prevYearDayData = prevYearSalesData.find(p => p.date.getDate() === dayOfMonth && p.date.getMonth() === d.date.getMonth());
+
                     cumulativeSales += d.sales;
+                    cumulativePrevMonthSales += prevMonthDayData?.sales || 0;
+                    cumulativePrevYearSales += prevYearDayData?.sales || 0;
+                    
                     return { 
                         name: `${d.date.getDate()}日`, 
                         '売上': d.sales,
                         '累計売上': cumulativeSales,
+                        '前月売上': prevMonthDayData?.sales || null,
+                        '前月累計売上': cumulativePrevMonthSales,
+                        '前期売上': prevYearDayData?.sales || null,
+                        '前期累計売上': cumulativePrevYearSales,
                     };
                 });
                 break;
@@ -253,6 +320,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ budgets }) => {
         }
     };
 
+    const toggleLineVisibility = (lineName: keyof LineVisibility) => {
+        setVisibleLines(prev => ({ ...prev, [lineName]: !prev[lineName] }));
+    };
 
     return (
         <div className="space-y-6">
@@ -306,6 +376,25 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ budgets }) => {
             <KpiSummary data={kpiData} />
 
             <Card title="売上推移">
+                <div className="px-2 pb-4 flex flex-wrap gap-x-4 gap-y-2">
+                    {lineOptions.map(name => (
+                        <button
+                            key={name}
+                            onClick={() => toggleLineVisibility(name)}
+                            style={{
+                                backgroundColor: visibleLines[name] ? lineColors[name] : undefined,
+                                borderColor: lineColors[name],
+                            }}
+                            className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+                                visibleLines[name]
+                                    ? 'text-white'
+                                    : 'text-slate-600 dark:text-slate-300 bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800'
+                            }`}
+                        >
+                            {name}
+                        </button>
+                    ))}
+                </div>
                 <div style={{ width: '100%', height: 300 }}>
                     <ResponsiveContainer>
                         <LineChart data={graphData}>
@@ -319,13 +408,20 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ budgets }) => {
                                     borderColor: 'rgba(255, 255, 255, 0.2)',
                                     color: '#fff'
                                 }}
-                                formatter={(value: number) => `¥${value.toLocaleString()}`} 
+                                formatter={(value: number, name) => [`¥${value.toLocaleString()}`, name]} 
                             />
                             <Legend />
-                            <Line yAxisId="left" type="monotone" dataKey="売上" stroke="#f08301" strokeWidth={2} activeDot={{ r: 8 }} />
-                            {graphData[0]?.hasOwnProperty('予算') && <Line yAxisId="left" type="monotone" dataKey="予算" stroke="#ffd5a3" strokeDasharray="5 5" />}
-                            <Line yAxisId="right" type="monotone" dataKey="累計売上" name="累計売上" stroke="#82ca9d" strokeWidth={2} dot={false} />
-                            {graphData[0]?.hasOwnProperty('累計予算') && <Line yAxisId="right" type="monotone" dataKey="累計予算" name="累計予算" stroke="#8884d8" strokeDasharray="3 3" dot={false} />}
+                            <Line connectNulls yAxisId="left" type="monotone" dataKey="売上" stroke={lineColors['売上']} strokeWidth={2} activeDot={{ r: 6 }} dot={false} hide={!visibleLines['売上']} />
+                            <Line connectNulls yAxisId="right" type="monotone" dataKey="累計売上" stroke={lineColors['累計売上']} strokeWidth={2} dot={false} hide={!visibleLines['累計売上']} />
+                            
+                            <Line connectNulls yAxisId="left" type="monotone" dataKey="前月売上" stroke={lineColors['前月売上']} strokeDasharray="3 3" dot={false} hide={!visibleLines['前月売上']} />
+                            <Line connectNulls yAxisId="right" type="monotone" dataKey="前月累計売上" stroke={lineColors['前月累計売上']} strokeDasharray="3 3" dot={false} hide={!visibleLines['前月累計売上']} />
+
+                            <Line connectNulls yAxisId="left" type="monotone" dataKey="前期売上" stroke={lineColors['前期売上']} strokeDasharray="5 5" dot={false} hide={!visibleLines['前期売上']} />
+                            <Line connectNulls yAxisId="right" type="monotone" dataKey="前期累計売上" stroke={lineColors['前期累計売上']} strokeDasharray="5 5" dot={false} hide={!visibleLines['前期累計売上']} />
+
+                            {graphData[0]?.hasOwnProperty('予算') && <Line yAxisId="left" type="monotone" dataKey="予算" stroke="#a0a0a0" strokeDasharray="1 5" dot={false} />}
+                            {graphData[0]?.hasOwnProperty('累計予算') && <Line yAxisId="right" type="monotone" dataKey="累計予算" stroke="#a0a0a0" strokeDasharray="1 5" dot={false} />}
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
