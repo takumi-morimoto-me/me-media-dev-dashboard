@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { DailyBudgetData, BudgetItem, MonthlyBudgetData } from '../types';
 import { getBudgetData, saveBudgetData } from '../data/budgetMockData';
 import Card from '../components/Card';
-import { CheckCircleIcon, ExclamationCircleIcon, InformationCircleIcon, UploadIcon, LinkIcon, PlusIcon, EditIcon, TrashIcon } from '../components/icons';
+import { CheckCircleIcon, ExclamationCircleIcon, InformationCircleIcon, UploadIcon, PlusIcon, EditIcon, TrashIcon } from '../components/icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import BudgetItemFormModal from '../components/BudgetItemFormModal';
 
@@ -248,10 +248,6 @@ const BudgetsPage: React.FC<BudgetsPageProps> = ({ mediaNames, fiscalYearStartMo
     reader.readAsText(file);
     event.target.value = ''; // Reset file input
   };
-  
-  const handleLinkSpreadsheet = () => {
-      alert("この機能は現在開発中です。");
-  };
 
   const { flatItems, itemMap } = useMemo(() => {
     const items = [...budgetItems];
@@ -483,13 +479,6 @@ const BudgetsPage: React.FC<BudgetsPageProps> = ({ mediaNames, fiscalYearStartMo
                 >
                     <UploadIcon className="w-5 h-5" />
                     CSVアップロード
-                </button>
-                <button
-                    onClick={handleLinkSpreadsheet} 
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-white/20 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                >
-                    <LinkIcon className="w-5 h-5" />
-                    スプレッドシート連携
                 </button>
             </div>
          )}

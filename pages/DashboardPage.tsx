@@ -134,7 +134,20 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ budgets }) => {
                         difference: dayData.sales - dailyBudget,
                         achievementRate: dailyBudget > 0 ? (dayData.sales / dailyBudget) * 100 : 0
                     };
-                    graph = salesData.slice(Math.max(0, day - 7), day).map(d => ({ name: `${d.date.getMonth() + 1}/${d.date.getDate()}`, '売上': d.sales, '予算': totalMonthlyBudget / daysInMonth }));
+                    
+                    let cumulativeSales = 0;
+                    let cumulativeBudget = 0;
+                    graph = salesData.slice(Math.max(0, day - 7), day).map(d => {
+                        cumulativeSales += d.sales;
+                        cumulativeBudget += totalMonthlyBudget / daysInMonth;
+                        return { 
+                            name: `${d.date.getMonth() + 1}/${d.date.getDate()}`, 
+                            '売上': d.sales, 
+                            '予算': totalMonthlyBudget / daysInMonth,
+                            '累計売上': cumulativeSales,
+                            '累計予算': cumulativeBudget
+                        };
+                    });
                 }
                 break;
             }
@@ -149,14 +162,36 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ budgets }) => {
                     const numDaysInWeek = weekInfo.end - weekInfo.start + 1;
                     const weeklyBudget = (totalMonthlyBudget / daysInMonth) * numDaysInWeek;
                     kpi = { sales: totalSales, budget: weeklyBudget, difference: totalSales - weeklyBudget, achievementRate: weeklyBudget > 0 ? (totalSales / weeklyBudget) * 100 : 0 };
-                    graph = weekData.map(d => ({ name: `${d.date.getMonth() + 1}/${d.date.getDate()}`, '売上': d.sales, '予算': totalMonthlyBudget / daysInMonth }));
+                    
+                    let cumulativeSales = 0;
+                    let cumulativeBudget = 0;
+                    graph = weekData.map(d => {
+                        cumulativeSales += d.sales;
+                        cumulativeBudget += totalMonthlyBudget / daysInMonth;
+                        return { 
+                            name: `${d.date.getMonth() + 1}/${d.date.getDate()}`, 
+                            '売上': d.sales, 
+                            '予算': totalMonthlyBudget / daysInMonth,
+                            '累計売上': cumulativeSales,
+                            '累計予算': cumulativeBudget
+                        };
+                    });
                 }
                 break;
             }
             case Granularity.MONTHLY: {
                 const totalSales = salesData.reduce((sum, d) => sum + d.sales, 0);
                 kpi = { sales: totalSales, budget: totalMonthlyBudget, difference: totalSales - totalMonthlyBudget, achievementRate: totalMonthlyBudget > 0 ? (totalSales / totalMonthlyBudget) * 100 : 0 };
-                graph = salesData.map(d => ({ name: `${d.date.getDate()}日`, '売上': d.sales }));
+                
+                let cumulativeSales = 0;
+                graph = salesData.map(d => {
+                    cumulativeSales += d.sales;
+                    return { 
+                        name: `${d.date.getDate()}日`, 
+                        '売上': d.sales,
+                        '累計売上': cumulativeSales,
+                    };
+                });
                 break;
             }
         }
@@ -276,7 +311,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ budgets }) => {
                         <LineChart data={graphData}>
                             <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
                             <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                            <YAxis tickFormatter={(val) => `¥${(val as number / 1000)}k`} tick={{ fontSize: 12 }} />
+                            <YAxis yAxisId="left" tickFormatter={(val) => `¥${(val as number / 1000)}k`} tick={{ fontSize: 12 }} />
+                            <YAxis yAxisId="right" orientation="right" tickFormatter={(val) => `¥${(val as number / 1000)}k`} tick={{ fontSize: 12 }} />
                             <Tooltip 
                                 contentStyle={{ 
                                     backgroundColor: 'rgba(30, 41, 59, 0.8)', 
@@ -286,8 +322,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ budgets }) => {
                                 formatter={(value: number) => `¥${value.toLocaleString()}`} 
                             />
                             <Legend />
-                            <Line type="monotone" dataKey="売上" stroke="#f08301" strokeWidth={2} activeDot={{ r: 8 }} />
-                            {graphData[0]?.hasOwnProperty('予算') && <Line type="monotone" dataKey="予算" stroke="#ffd5a3" strokeDasharray="5 5" />}
+                            <Line yAxisId="left" type="monotone" dataKey="売上" stroke="#f08301" strokeWidth={2} activeDot={{ r: 8 }} />
+                            {graphData[0]?.hasOwnProperty('予算') && <Line yAxisId="left" type="monotone" dataKey="予算" stroke="#ffd5a3" strokeDasharray="5 5" />}
+                            <Line yAxisId="right" type="monotone" dataKey="累計売上" name="累計売上" stroke="#82ca9d" strokeWidth={2} dot={false} />
+                            {graphData[0]?.hasOwnProperty('累計予算') && <Line yAxisId="right" type="monotone" dataKey="累計予算" name="累計予算" stroke="#8884d8" strokeDasharray="3 3" dot={false} />}
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
