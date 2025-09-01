@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
-import { User, Role, BudgetItem, Program, BotStatus } from '../types';
+import { User, Role, Program, BotStatus } from '../types';
 import { TrashIcon, EditIcon, PlusIcon } from '../components/icons';
-import { mockBotStatuses, MEDIA_NAMES as ALL_MEDIA, ASP_NAMES, CATEGORIES } from '../data/mockData';
+import { mockBotStatuses } from '../data/mockData';
 
 type Tab = '基本設定' | 'マスターデータ' | '自動化・通知';
 
@@ -17,8 +17,6 @@ interface SettingsPageProps {
     // Master Data
     mediaNames: string[];
     setMediaNames: React.Dispatch<React.SetStateAction<string[]>>;
-    mediaBudgetItems: { [mediaName: string]: BudgetItem[] };
-    setMediaBudgetItems: React.Dispatch<React.SetStateAction<{ [mediaName: string]: BudgetItem[] }>>;
     programs: Program[];
     setPrograms: React.Dispatch<React.SetStateAction<Program[]>>;
     // Automation
@@ -154,54 +152,8 @@ const BasicSettingsTab: React.FC<Pick<SettingsPageProps, 'fiscalYearStartMonth'|
 };
 
 // --- Master Data Tab ---
-interface ItemEditModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSave: (name: string) => void;
-    itemToEdit: BudgetItem | null;
-}
-const ItemEditModal: React.FC<ItemEditModalProps> = ({ isOpen, onClose, onSave, itemToEdit }) => {
-    const [name, setName] = useState('');
-    useEffect(() => {
-        if (isOpen) {
-            setName(itemToEdit?.name || '');
-        }
-    }, [isOpen, itemToEdit]);
-
-    if (!isOpen) return null;
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (name.trim()) onSave(name.trim());
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex justify-center items-center">
-            <div className="bg-background dark:bg-dark-background dark:border dark:border-white/10 rounded-lg shadow-xl p-8 w-full max-w-md">
-                <h2 className="text-xl font-bold mb-6">{itemToEdit ? '項目名を編集' : '新規項目を追加'}</h2>
-                <form onSubmit={handleSubmit}>
-                    <div className="space-y-4">
-                        <div>
-                            <label htmlFor="item-name" className="block text-sm font-medium text-slate-700 dark:text-slate-300">項目名</label>
-                            <input type="text" id="item-name" value={name} onChange={e => setName(e.target.value)} required className="mt-1 block w-full border border-gray-300 dark:border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-slate-800" />
-                        </div>
-                    </div>
-                    <div className="mt-8 flex justify-end space-x-3">
-                        <button type="button" onClick={onClose} className="bg-white dark:bg-slate-700 py-2 px-4 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                            キャンセル
-                        </button>
-                        <button type="submit" className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                            保存
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-};
-
-const MasterDataTab: React.FC<Pick<SettingsPageProps, 'mediaNames'|'setMediaNames'|'mediaBudgetItems'|'setMediaBudgetItems'|'programs'|'setPrograms'> & {onSuccess: (msg: string) => void}> = 
-({ mediaNames, setMediaNames, mediaBudgetItems, setMediaBudgetItems, programs, setPrograms, onSuccess }) => {
+const MasterDataTab: React.FC<Pick<SettingsPageProps, 'mediaNames'|'setMediaNames'|'programs'|'setPrograms'> & {onSuccess: (msg: string) => void}> = 
+({ mediaNames, setMediaNames, programs, setPrograms, onSuccess }) => {
     
     // --- Media Management ---
     const handleAddMedia = () => {
@@ -220,105 +172,6 @@ const MasterDataTab: React.FC<Pick<SettingsPageProps, 'mediaNames'|'setMediaName
             onSuccess(`メディア「${nameToDelete}」を削除しました。`);
         }
     };
-    
-    // --- Item Category Management ---
-    const [selectedMedia, setSelectedMedia] = useState(mediaNames[0] || '');
-    const [isItemModalOpen, setIsItemModalOpen] = useState(false);
-    const [itemToEdit, setItemToEdit] = useState<BudgetItem | null>(null);
-    const [itemParentType, setItemParentType] = useState<'cost' | 'sales' | null>(null);
-
-    const handleOpenAddItemModal = (parentType: 'cost' | 'sales') => {
-        setItemToEdit(null);
-        setItemParentType(parentType);
-        setIsItemModalOpen(true);
-    };
-
-    const handleOpenEditItemModal = (item: BudgetItem) => {
-        setItemToEdit(item);
-        setItemParentType(null);
-        setIsItemModalOpen(true);
-    };
-
-    const handleSaveItem = (itemName: string) => {
-        setMediaBudgetItems(prev => {
-            const currentItems = prev[selectedMedia] ? [...prev[selectedMedia]] : [];
-            if (itemToEdit) { // Editing
-                const index = currentItems.findIndex(i => i.id === itemToEdit.id);
-                if (index > -1) {
-                    currentItems[index] = { ...currentItems[index], name: itemName };
-                }
-            } else { // Adding
-                const newItem: BudgetItem = {
-                    id: `custom-${Date.now()}`,
-                    name: itemName,
-                    parentId: itemParentType,
-                    isEditable: true,
-                    isHeader: false,
-                };
-                currentItems.push(newItem);
-            }
-            return {
-                ...prev,
-                [selectedMedia]: currentItems
-            };
-        });
-        setIsItemModalOpen(false);
-        onSuccess('項目を保存しました。');
-    };
-
-    const handleDeleteItem = (itemId: string) => {
-        if (window.confirm('この項目を削除しますか？ 関連する予算・実績データも表示されなくなる可能性があります。')) {
-            setMediaBudgetItems(prev => ({
-                ...prev,
-                [selectedMedia]: (prev[selectedMedia] || []).filter(i => i.id !== itemId)
-            }));
-            onSuccess('項目を削除しました。');
-        }
-    };
-
-    const costItems = useMemo(() => (mediaBudgetItems[selectedMedia] || []).filter(i => i.isEditable && i.parentId === 'cost'), [mediaBudgetItems, selectedMedia]);
-    const salesItems = useMemo(() => (mediaBudgetItems[selectedMedia] || []).filter(i => i.isEditable && i.parentId === 'sales'), [mediaBudgetItems, selectedMedia]);
-
-    const ItemCategoryTable: React.FC<{
-        title: string;
-        items: BudgetItem[];
-        onAdd: () => void;
-        onEdit: (item: BudgetItem) => void;
-        onDelete: (id: string) => void;
-    }> = ({ title, items, onAdd, onEdit, onDelete }) => (
-      <div className="border border-slate-200 dark:border-white/10 rounded-lg p-4">
-        <div className="flex justify-between items-center mb-3">
-          <h4 className="font-semibold text-slate-800 dark:text-slate-100">{title}</h4>
-          <button onClick={onAdd} className="inline-flex items-center gap-1 px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-            <PlusIcon className="w-4 h-4" /> 新規追加
-          </button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left text-slate-500 dark:text-slate-400">
-             <thead className="text-xs text-slate-700 dark:text-slate-300 uppercase bg-slate-50 dark:bg-white/5">
-                <tr>
-                    <th scope="col" className="px-4 py-2">項目名</th>
-                    <th scope="col" className="px-4 py-2 text-right">操作</th>
-                </tr>
-            </thead>
-            <tbody>
-              {items.map(item => (
-                <tr key={item.id} className="border-b border-slate-200 dark:border-white/10">
-                  <td className="px-4 py-2 font-medium text-slate-900 dark:text-slate-50">{item.name}</td>
-                  <td className="px-4 py-2 text-right space-x-3">
-                    <button onClick={() => onEdit(item)} className="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300"><EditIcon className="w-4 h-4"/></button>
-                    <button onClick={() => onDelete(item.id)} className="text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400"><TrashIcon className="w-4 h-4"/></button>
-                  </td>
-                </tr>
-              ))}
-              {items.length === 0 && (
-                  <tr><td colSpan={2} className="text-center py-4 text-slate-400">項目がありません。</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
     
     return (
         <div className="space-y-8">
@@ -347,37 +200,6 @@ const MasterDataTab: React.FC<Pick<SettingsPageProps, 'mediaNames'|'setMediaName
                   <button onClick={handleAddMedia} className="inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                     <PlusIcon className="w-5 h-5"/>新規メディア追加
                   </button>
-                </div>
-            </Card>
-
-             <Card title="項目カテゴリ管理">
-                <ItemEditModal 
-                    isOpen={isItemModalOpen}
-                    onClose={() => setIsItemModalOpen(false)}
-                    onSave={handleSaveItem}
-                    itemToEdit={itemToEdit}
-                />
-                <div className="mb-4">
-                    <label htmlFor="media-select-category" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">設定対象メディア</label>
-                    <select id="media-select-category" value={selectedMedia} onChange={e => setSelectedMedia(e.target.value)} className="block w-full md:w-1/2 rounded-md border-gray-300 dark:border-white/20 bg-white dark:bg-slate-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
-                        {mediaNames.map(name => <option key={name} value={name}>{name}</option>)}
-                    </select>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <ItemCategoryTable 
-                        title="費用項目"
-                        items={costItems}
-                        onAdd={() => handleOpenAddItemModal('cost')}
-                        onEdit={handleOpenEditItemModal}
-                        onDelete={handleDeleteItem}
-                    />
-                    <ItemCategoryTable 
-                        title="実績項目"
-                        items={salesItems}
-                        onAdd={() => handleOpenAddItemModal('sales')}
-                        onEdit={handleOpenEditItemModal}
-                        onDelete={handleDeleteItem}
-                    />
                 </div>
             </Card>
 

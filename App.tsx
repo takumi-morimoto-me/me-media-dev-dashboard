@@ -26,13 +26,7 @@ function App() {
   
   // Settings: Master Data
   const [mediaNames, setMediaNames] = useState<string[]>(MEDIA_NAMES);
-  const [mediaBudgetItems, setMediaBudgetItems] = useState<{ [mediaName: string]: BudgetItem[] }>(() => {
-    const initialItems: { [mediaName: string]: BudgetItem[] } = {};
-    MEDIA_NAMES.forEach(name => {
-      initialItems[name] = JSON.parse(JSON.stringify(initialBudgetItems));
-    });
-    return initialItems;
-  });
+  const [budgetItems, setBudgetItems] = useState<BudgetItem[]>(initialBudgetItems);
   const [programs, setPrograms] = useState<Program[]>(mockPrograms);
 
   // Settings: Automation
@@ -115,7 +109,8 @@ function App() {
                 element={<BudgetsPage 
                   mediaNames={mediaNames} 
                   fiscalYearStartMonth={fiscalYearStartMonth} 
-                  mediaBudgetItems={mediaBudgetItems}
+                  budgetItems={budgetItems}
+                  setBudgetItems={setBudgetItems}
                 />} 
               />
               <Route 
@@ -123,7 +118,8 @@ function App() {
                 element={<ResultsPage 
                   mediaNames={mediaNames} 
                   fiscalYearStartMonth={fiscalYearStartMonth} 
-                  mediaBudgetItems={mediaBudgetItems}
+                  budgetItems={budgetItems}
+                  setBudgetItems={setBudgetItems}
                 />} 
               />
               <Route 
@@ -139,8 +135,6 @@ function App() {
                   // Master Data
                   mediaNames={mediaNames}
                   setMediaNames={setMediaNames}
-                  mediaBudgetItems={mediaBudgetItems}
-                  setMediaBudgetItems={setMediaBudgetItems}
                   programs={programs}
                   setPrograms={setPrograms}
                   // Automation

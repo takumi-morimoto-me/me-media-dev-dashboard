@@ -2,8 +2,9 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { DailyBudgetData, BudgetItem, MonthlyBudgetData } from '../types';
 import { getResultsData, saveResultsData } from '../data/resultMockData';
 import Card from '../components/Card';
-import { CheckCircleIcon, ExclamationCircleIcon, InformationCircleIcon } from '../components/icons';
+import { CheckCircleIcon, ExclamationCircleIcon, InformationCircleIcon, PlusIcon, EditIcon, TrashIcon } from '../components/icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import BudgetItemFormModal from '../components/BudgetItemFormModal';
 
 type Granularity = '月次' | '日次';
 
@@ -53,9 +54,10 @@ const Toast: React.FC<{ message: string; type: 'success' | 'error'; onClose: () 
 interface ResultsPageProps {
     mediaNames: string[];
     fiscalYearStartMonth: number;
-    mediaBudgetItems: { [mediaName: string]: BudgetItem[] };
+    budgetItems: BudgetItem[];
+    setBudgetItems: React.Dispatch<React.SetStateAction<BudgetItem[]>>;
 }
-const ResultsPage: React.FC<ResultsPageProps> = ({ mediaNames, fiscalYearStartMonth, mediaBudgetItems }) => {
+const ResultsPage: React.FC<ResultsPageProps> = ({ mediaNames, fiscalYearStartMonth, budgetItems, setBudgetItems }) => {
   const [selectedMedia, setSelectedMedia] = useState(mediaNames[0] || '');
   const [granularity, setGranularity] = useState<Granularity>('月次');
   const [targetDate, setTargetDate] = useState(new Date());
@@ -69,10 +71,12 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ mediaNames, fiscalYearStartMo
   const [saveStatus, setSaveStatus] = useState<Record<string, 'saving' | 'saved' | 'error'>>({});
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
+  const [itemToEdit, setItemToEdit] = useState<BudgetItem | null>(null);
+  const [itemParent, setItemParent] = useState<BudgetItem | null>(null);
+
   const selectedFiscalPeriod = useMemo(() => getFiscalPeriod(targetDate, fiscalYearStartMonth), [targetDate, fiscalYearStartMonth]);
   
-  const budgetItems = useMemo(() => mediaBudgetItems[selectedMedia] || [], [mediaBudgetItems, selectedMedia]);
-
   useEffect(() => {
     if (mediaNames.length > 0 && !mediaNames.includes(selectedMedia)) {
       setSelectedMedia(mediaNames[0]);
@@ -312,8 +316,58 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ mediaNames, fiscalYearStartMo
     });
   }, [granularity, calculatedYearlyData, fiscalMonths, budgetItems]);
 
+  const handleOpenAddItemModal = (parentItem: BudgetItem) => {
+    setItemToEdit(null);
+    setItemParent(parentItem);
+    setIsItemModalOpen(true);
+  };
+
+  const handleOpenEditItemModal = (item: BudgetItem) => {
+    setItemToEdit(item);
+    setItemParent(null);
+    setIsItemModalOpen(true);
+  };
+
+  const handleCloseItemModal = () => {
+    setIsItemModalOpen(false);
+    setItemToEdit(null);
+    setItemParent(null);
+  };
+
+  const handleSaveItem = (itemName: string) => {
+    if (itemToEdit) {
+      setBudgetItems(prev => prev.map(i => i.id === itemToEdit.id ? { ...i, name: itemName } : i));
+      setToast({ message: '項目を更新しました。', type: 'success' });
+    } else if (itemParent) {
+      const newItem: BudgetItem = {
+        id: `custom-${Date.now()}`,
+        name: itemName,
+        parentId: itemParent.id,
+        isEditable: true,
+      };
+      setBudgetItems(prev => [...prev, newItem]);
+      setToast({ message: '項目を追加しました。', type: 'success' });
+    }
+    handleCloseItemModal();
+  };
+
+  const handleDeleteItem = (itemId: string) => {
+    if (window.confirm('この項目を削除しますか？ 関連する予算・実績データも表示されなくなる可能性があります。')) {
+      setBudgetItems(prev => prev.filter(i => i.id !== itemId));
+      setToast({ message: '項目を削除しました。', type: 'success' });
+    }
+  };
+
+
   return (
     <div className="space-y-6">
+      <BudgetItemFormModal
+        isOpen={isItemModalOpen}
+        onClose={handleCloseItemModal}
+        onSave={handleSaveItem}
+        itemToEdit={itemToEdit}
+        parentItem={itemParent}
+      />
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <h1 className="text-2xl font-bold">実績入力</h1>
       
@@ -403,9 +457,28 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ mediaNames, fiscalYearStartMo
                         totalYoY = calculateYoY(currentTotal, previousTotal);
                     }
                     return (
-                  <tr key={item.id} className={item.isHeader ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-dark-background hover:bg-slate-50/50 dark:hover:bg-slate-700/50'}>
+                  <tr key={item.id} className={`group ${item.isHeader ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-dark-background hover:bg-slate-50/50 dark:hover:bg-slate-700/50'}`}>
                     <th className="sticky left-0 z-10 p-2 border border-slate-200 dark:border-white/10 text-left font-medium bg-inherit" style={{ paddingLeft: `${item.depth * 1.5 + 0.5}rem` }}>
-                      {item.name}
+                        <div className="flex items-center justify-between min-h-[2rem]">
+                            <span>{item.name}</span>
+                            <div className="flex items-center space-x-1">
+                            {item.isHeader && (
+                                <button onClick={() => handleOpenAddItemModal(item)} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
+                                <PlusIcon className="w-4 h-4" />
+                                </button>
+                            )}
+                            {item.isEditable && (
+                                <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => handleOpenEditItemModal(item)} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
+                                    <EditIcon className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => handleDeleteItem(item.id)} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-red-500 hover:text-red-700">
+                                    <TrashIcon className="w-4 h-4" />
+                                </button>
+                                </div>
+                            )}
+                            </div>
+                        </div>
                     </th>
                     <td className="sticky left-[200px] z-10 p-0 border border-slate-200 dark:border-white/10 text-right font-semibold bg-inherit">
                        <div className="px-2 py-1.5 flex flex-col items-end">
