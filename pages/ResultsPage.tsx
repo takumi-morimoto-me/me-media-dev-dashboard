@@ -300,7 +300,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ mediaNames, fiscalYearStartMo
     return { text, color };
   };
 
-  const trendGraphData = useMemo(() => {
+  const monthlyTrendGraphData = useMemo(() => {
     if (granularity !== '月次' || !calculatedYearlyData) return [];
 
     const mainItems = budgetItems.filter(i => i.isHeader);
@@ -316,7 +316,23 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ mediaNames, fiscalYearStartMo
     });
   }, [granularity, calculatedYearlyData, fiscalMonths, budgetItems]);
 
-  const handleOpenAddItemModal = (parentItem: BudgetItem) => {
+  const dailyTrendGraphData = useMemo(() => {
+    if (granularity !== '日次' || !calculatedDailyData) return [];
+    const mainItems = budgetItems.filter(i => i.isHeader);
+    const data = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dayData: { name: string; [key: string]: string | number } = {
+            name: `${day}日`,
+        };
+        mainItems.forEach(item => {
+            dayData[item.name] = getDayValue(calculatedDailyData, item.id, day);
+        });
+        data.push(dayData);
+    }
+    return data;
+  }, [granularity, calculatedDailyData, daysInMonth, budgetItems]);
+
+  const handleOpenAddItemModal = (parentItem: BudgetItem | null) => {
     setItemToEdit(null);
     setItemParent(parentItem);
     setIsItemModalOpen(true);
@@ -347,13 +363,35 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ mediaNames, fiscalYearStartMo
       };
       setBudgetItems(prev => [...prev, newItem]);
       setToast({ message: '項目を追加しました。', type: 'success' });
+    } else {
+        const newItem: BudgetItem = {
+            id: `custom-header-${Date.now()}`,
+            name: itemName,
+            parentId: null,
+            isEditable: true,
+            isHeader: true,
+        };
+        setBudgetItems(prev => [...prev, newItem]);
+        setToast({ message: '大項目を追加しました。', type: 'success' });
     }
     handleCloseItemModal();
   };
 
   const handleDeleteItem = (itemId: string) => {
-    if (window.confirm('この項目を削除しますか？ 関連する予算・実績データも表示されなくなる可能性があります。')) {
-      setBudgetItems(prev => prev.filter(i => i.id !== itemId));
+    if (window.confirm('この項目を削除しますか？関連するすべての子項目とデータも削除されます。')) {
+      const itemsToDelete = new Set<string>([itemId]);
+      
+      const findChildrenRecursively = (parentId: string) => {
+          const children = budgetItems.filter(item => item.parentId === parentId);
+          for (const child of children) {
+              itemsToDelete.add(child.id);
+              findChildrenRecursively(child.id);
+          }
+      };
+
+      findChildrenRecursively(itemId);
+
+      setBudgetItems(prev => prev.filter(i => !itemsToDelete.has(i.id)));
       setToast({ message: '項目を削除しました。', type: 'success' });
     }
   };
@@ -406,7 +444,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ mediaNames, fiscalYearStartMo
         <Card title="今期のトレンドグラフ">
             <div className="w-full h-72">
                 <ResponsiveContainer>
-                    <LineChart data={trendGraphData}>
+                    <LineChart data={monthlyTrendGraphData}>
                         <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
                         <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                         <YAxis tickFormatter={(val) => `${(val as number / 1000)}k`} tick={{ fontSize: 12 }} />
@@ -428,7 +466,44 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ mediaNames, fiscalYearStartMo
         </Card>
       )}
 
-      <Card title="実績入力グリッド" >
+      {granularity === '日次' && !isLoading && (
+        <Card title="今月のトレンドグラフ">
+            <div className="w-full h-72">
+                <ResponsiveContainer>
+                    <LineChart data={dailyTrendGraphData}>
+                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+                        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                        <YAxis tickFormatter={(val) => `${(val as number / 1000)}k`} tick={{ fontSize: 12 }} />
+                        <Tooltip 
+                            contentStyle={{ 
+                                backgroundColor: 'rgba(30, 41, 59, 0.8)', 
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                color: '#fff'
+                            }}
+                            formatter={(value: number) => `${value.toLocaleString()}`} 
+                        />
+                        <Legend />
+                        {budgetItems.filter(i => i.isHeader).map((item, index) => (
+                            <Line key={item.id} type="monotone" dataKey={item.name} stroke={['#f08301', '#8884d8', '#82ca9d'][index % 3]} strokeWidth={2} />
+                        ))}
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
+        </Card>
+      )}
+
+      <Card 
+        title="実績入力グリッド"
+        titleExtra={
+            <button
+                onClick={() => handleOpenAddItemModal(null)}
+                className="inline-flex items-center gap-1 px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+                <PlusIcon className="w-4 h-4" />
+                大項目を追加
+            </button>
+        }
+      >
         {isLoading ? (
           <div className="text-center p-8">データを読み込み中...</div>
         ) : (
@@ -461,22 +536,22 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ mediaNames, fiscalYearStartMo
                     <th className="sticky left-0 z-10 p-2 border border-slate-200 dark:border-white/10 text-left font-medium bg-inherit" style={{ paddingLeft: `${item.depth * 1.5 + 0.5}rem` }}>
                         <div className="flex items-center justify-between min-h-[2rem]">
                             <span>{item.name}</span>
-                            <div className="flex items-center space-x-1">
-                            {item.isHeader && (
-                                <button onClick={() => handleOpenAddItemModal(item)} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
-                                <PlusIcon className="w-4 h-4" />
-                                </button>
-                            )}
-                            {item.isEditable && (
-                                <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => handleOpenEditItemModal(item)} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
-                                    <EditIcon className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => handleDeleteItem(item.id)} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-red-500 hover:text-red-700">
-                                    <TrashIcon className="w-4 h-4" />
-                                </button>
-                                </div>
-                            )}
+                             <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {item.isHeader && (
+                                    <button onClick={() => handleOpenAddItemModal(item)} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200" title="サブ項目を追加">
+                                    <PlusIcon className="w-4 h-4" />
+                                    </button>
+                                )}
+                                {item.isEditable && (
+                                    <>
+                                    <button onClick={() => handleOpenEditItemModal(item)} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200" title="編集">
+                                        <EditIcon className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={() => handleDeleteItem(item.id)} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-red-500 hover:text-red-700" title="削除">
+                                        <TrashIcon className="w-4 h-4" />
+                                    </button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </th>

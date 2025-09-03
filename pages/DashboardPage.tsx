@@ -267,7 +267,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ budgets }) => {
                     return d;
                 }).reverse();
 
-                const allDailyData = dates.flatMap(d => generateSalesData(d, 'monthly'));
+                const monthlyDataSets = dates.map(d => ({
+                    date: d,
+                    salesData: generateSalesData(d, 'monthly')
+                }));
+
+                const allDailyData = monthlyDataSets.flatMap(set => set.salesData);
                 
                 const result = processPeriodData(allDailyData, totalMonthlyBudget * 12);
                 kpi = result.kpi;
@@ -275,11 +280,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ budgets }) => {
                 asp = result.asp;
 
                 let cumulativeSales = 0, cumulativeBudget = 0, cumulativePrevYearSales = 0;
-                graph = dates.map(d => {
-                    const monthSalesData = generateSalesData(d, 'monthly');
+                graph = monthlyDataSets.map(set => {
+                    const { date, salesData: monthSalesData } = set;
                     const totalSales = monthSalesData.reduce((sum, day) => sum + day.sales, 0);
                     
-                    const prevYearDate = new Date(d); prevYearDate.setFullYear(d.getFullYear() - 1);
+                    const prevYearDate = new Date(date); prevYearDate.setFullYear(date.getFullYear() - 1);
                     const prevYearMonthSalesData = generateSalesData(prevYearDate, 'monthly');
                     const prevYearTotalSales = prevYearMonthSalesData.reduce((sum, day) => sum + day.sales, 0);
 
@@ -288,7 +293,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ budgets }) => {
                     cumulativePrevYearSales += prevYearTotalSales;
                     
                     return { 
-                        name: `${d.getFullYear()}/${d.getMonth() + 1}`, 
+                        name: `${date.getFullYear()}/${date.getMonth() + 1}`, 
                         '売上': totalSales,
                         '予算': totalMonthlyBudget,
                         '累計売上': cumulativeSales,
@@ -423,29 +428,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ budgets }) => {
                     </ResponsiveContainer>
                 </div>
             </Card>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <PerformanceTable 
-                    title="カテゴリ別実績"
-                    headers={["カテゴリ名", "売上"]}
-                    data={categoryData}
-                    formatters={[
-                        (val) => val,
-                        (val) => `¥${(val as number).toLocaleString()}`,
-                    ]}
-                />
-                <PerformanceTable 
-                    title="ASP別実績"
-                    headers={["ASP名", "売上", "費用", "利益"]}
-                    data={aspData}
-                    formatters={[
-                        (val) => val,
-                        (val) => `¥${(val as number).toLocaleString()}`,
-                        (val) => `¥${(val as number).toLocaleString()}`,
-                        (val) => `¥${(val as number).toLocaleString()}`
-                    ]}
-                />
-            </div>
 
             <PerformanceTable 
                 title="メディア別実績"
@@ -475,6 +457,29 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ budgets }) => {
                 ]}
                 onRowClick={(row: PerformanceByMedia) => navigate(`/media/${row.mediaName}`)}
             />
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <PerformanceTable 
+                    title="カテゴリ別実績"
+                    headers={["カテゴリ名", "売上"]}
+                    data={categoryData}
+                    formatters={[
+                        (val) => val,
+                        (val) => `¥${(val as number).toLocaleString()}`,
+                    ]}
+                />
+                <PerformanceTable 
+                    title="ASP別実績"
+                    headers={["ASP名", "売上", "費用", "利益"]}
+                    data={aspData}
+                    formatters={[
+                        (val) => val,
+                        (val) => `¥${(val as number).toLocaleString()}`,
+                        (val) => `¥${(val as number).toLocaleString()}`,
+                        (val) => `¥${(val as number).toLocaleString()}`
+                    ]}
+                />
+            </div>
         </div>
     );
 };

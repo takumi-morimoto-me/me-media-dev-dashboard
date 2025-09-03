@@ -1,17 +1,17 @@
 import { BudgetItem, DailyBudgetData } from '../types';
 
 export const initialBudgetItems: BudgetItem[] = [
-  { id: 'sales', name: '売上高', parentId: null, isEditable: false, isHeader: true },
+  { id: 'sales', name: '売上高', parentId: null, isEditable: true, isHeader: true },
   { id: 'sales_ad', name: '広告売上', parentId: 'sales', isEditable: true },
   { id: 'sales_subscription', name: 'サブスク売上', parentId: 'sales', isEditable: true },
   { id: 'sales_other', name: 'その他売上', parentId: 'sales', isEditable: true },
   
-  { id: 'pv', name: 'PV数', parentId: null, isEditable: false, isHeader: true },
+  { id: 'pv', name: 'PV数', parentId: null, isEditable: true, isHeader: true },
   { id: 'pv_organic', name: '自然検索', parentId: 'pv', isEditable: true },
   { id: 'pv_paid', name: '広告', parentId: 'pv', isEditable: true },
   { id: 'pv_social', name: 'SNS', parentId: 'pv', isEditable: true },
 
-  { id: 'cost', name: '費用', parentId: null, isEditable: false, isHeader: true },
+  { id: 'cost', name: '費用', parentId: null, isEditable: true, isHeader: true },
   { id: 'cost_personnel', name: '人件費', parentId: 'cost', isEditable: true },
   { id: 'cost_marketing', name: 'マーケティング費', parentId: 'cost', isEditable: true },
 ];

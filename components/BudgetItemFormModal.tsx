@@ -27,7 +27,7 @@ const BudgetItemFormModal: React.FC<BudgetItemFormModalProps> = ({ isOpen, onClo
     if (name.trim()) onSave(name.trim());
   };
 
-  const title = itemToEdit ? '項目名を編集' : `新規項目を「${parentItem?.name}」に追加`;
+  const title = itemToEdit ? '項目名を編集' : (parentItem ? `新規項目を「${parentItem.name}」に追加` : '新規大項目を追加');
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex justify-center items-center" aria-modal="true" role="dialog">
