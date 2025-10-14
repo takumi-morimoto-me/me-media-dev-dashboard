@@ -1,0 +1,10 @@
+# Core dependencies
+playwright
+google-cloud-aiplatform
+google-cloud-secret-manager
+supabase
+python-dotenv
+
+# Linter & Formatter
+ruff
+black

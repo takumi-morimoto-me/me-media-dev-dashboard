@@ -1,0 +1,11 @@
+{
+  "name": "mcp-agent",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "lint": "ruff check . && black --check .",
+    "format": "ruff check . --fix && black .",
+    "build": "docker build --no-cache -t mcp-agent .",
+    "dev": "bash -c 'source venv/bin/activate && python main.py'"
+  }
+}

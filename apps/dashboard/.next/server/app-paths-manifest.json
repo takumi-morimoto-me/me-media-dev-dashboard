@@ -1,0 +1,6 @@
+{
+  "/dashboard/agent/page": "app/dashboard/agent/page.js",
+  "/dashboard/financials/page": "app/dashboard/financials/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js"
+}

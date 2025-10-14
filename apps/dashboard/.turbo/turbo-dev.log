@@ -1,0 +1,245 @@
+
+> dashboard@1.0.0 dev /Users/t.morimoto/Desktop/me-media-dev-dashboard/apps/dashboard
+> next dev --turbopack
+
+ [33m[1m⚠[22m[39m Port 3000 is in use by process 7407, using available port 3002 instead.
+   [1m[38;2;173;127;168m▲ Next.js 15.5.4[39m[22m (Turbopack)
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.78.122:3002
+   - Environments: .env.local
+
+ [32m[1m✓[22m[39m Starting...
+ [32m[1m✓[22m[39m Ready in 1515ms
+ [37m[1m○[22m[39m Compiling /dashboard/agent ...
+ [32m[1m✓[22m[39m Compiled /dashboard/agent in 3.4s
+MediaList - Data: [
+  {
+    id: [32m'801ded37-0017-483d-8d60-dd74cf916afd'[39m,
+    name: [32m'Mortorz'[39m,
+    slug: [32m'mortorz'[39m
+  },
+  {
+    id: [32m'4d3d6a03-3cf2-41b9-a23c-4b2d75bafa12'[39m,
+    name: [32m'ReRe'[39m,
+    slug: [32m'rere'[39m
+  },
+  {
+    id: [32m'57d62304-0ccd-4255-a128-5250e1469171'[39m,
+    name: [32m'最安修理'[39m,
+    slug: [32m'saiyasu-syuri'[39m
+  }
+]
+MediaList - Error: [1mnull[22m
+ GET /dashboard/agent [32m200[39m in 4375ms
+ [32m[1m✓[22m[39m Compiled /favicon.ico in 272ms
+ GET /favicon.ico?favicon.0b3bf435.ico [32m200[39m in 624ms
+ [37m[1m○[22m[39m Compiling /dashboard/financials ...
+ [32m[1m✓[22m[39m Compiled /dashboard/financials in 791ms
+ GET /dashboard/financials [32m200[39m in 2078ms
+ GET /dashboard/financials?media=801ded37-0017-483d-8d60-dd74cf916afd [32m200[39m in 279ms
+ GET /dashboard/financials?media=4d3d6a03-3cf2-41b9-a23c-4b2d75bafa12 [32m200[39m in 305ms
+ GET /dashboard/financials?media=57d62304-0ccd-4255-a128-5250e1469171 [32m200[39m in 262ms
+ GET /dashboard/agent [32m200[39m in 368ms
+ GET /dashboard/agent?media=4d3d6a03-3cf2-41b9-a23c-4b2d75bafa12 [32m200[39m in 222ms
+ GET /dashboard/financials [32m200[39m in 379ms
+ GET /dashboard/agent [32m200[39m in 223ms
+ GET /dashboard/agent?media=801ded37-0017-483d-8d60-dd74cf916afd [32m200[39m in 792ms
+ GET /dashboard/agent?media=4d3d6a03-3cf2-41b9-a23c-4b2d75bafa12 [32m200[39m in 202ms
+ GET /dashboard/agent?media=57d62304-0ccd-4255-a128-5250e1469171 [32m200[39m in 641ms
+ [32m[1m✓[22m[39m Compiled /dashboard in 481ms
+ GET /dashboard [32m200[39m in 549ms
+ GET /dashboard/financials [32m200[39m in 351ms
+ [32m[1m✓[22m[39m Compiled in 150ms
+ [32m[1m✓[22m[39m Compiled in 108ms
+ [32m[1m✓[22m[39m Compiled /dashboard/agent in 72ms
+Error fetching asps: {
+  code: [32m'PGRST200'[39m,
+  details: [32m"Searched for a foreign key relationship between 'asps' and 'media_id' in the schema 'public', but no matches were found."[39m,
+  hint: [1mnull[22m,
+  message: [32m"Could not find a relationship between 'asps' and 'media_id' in the schema cache"[39m
+}
+ GET /dashboard/agent [32m200[39m in 919ms
+ [32m[1m✓[22m[39m Compiled in 66ms
+ [32m[1m✓[22m[39m Compiled /dashboard/agent in 106ms
+MediaList - Data: [
+  {
+    id: [32m'801ded37-0017-483d-8d60-dd74cf916afd'[39m,
+    name: [32m'Mortorz'[39m,
+    slug: [32m'mortorz'[39m
+  },
+  {
+    id: [32m'4d3d6a03-3cf2-41b9-a23c-4b2d75bafa12'[39m,
+    name: [32m'ReRe'[39m,
+    slug: [32m'rere'[39m
+  },
+  {
+    id: [32m'57d62304-0ccd-4255-a128-5250e1469171'[39m,
+    name: [32m'最安修理'[39m,
+    slug: [32m'saiyasu-syuri'[39m
+  }
+]
+MediaList - Error: [1mnull[22m
+ GET /dashboard/agent [32m200[39m in 1257ms
+ GET /favicon.ico?favicon.0b3bf435.ico [32m200[39m in 301ms
+ [32m[1m✓[22m[39m Compiled in 78ms
+ [32m[1m✓[22m[39m Compiled in 67ms
+ [32m[1m✓[22m[39m Compiled in 40ms
+ [32m[1m✓[22m[39m Compiled in 117ms
+ [32m[1m✓[22m[39m Compiled in 160ms
+ [32m[1m✓[22m[39m Compiled in 58ms
+MediaList - Data: [
+  {
+    id: [32m'801ded37-0017-483d-8d60-dd74cf916afd'[39m,
+    name: [32m'Mortorz'[39m,
+    slug: [32m'mortorz'[39m
+  },
+  {
+    id: [32m'4d3d6a03-3cf2-41b9-a23c-4b2d75bafa12'[39m,
+    name: [32m'ReRe'[39m,
+    slug: [32m'rere'[39m
+  },
+  {
+    id: [32m'57d62304-0ccd-4255-a128-5250e1469171'[39m,
+    name: [32m'最安修理'[39m,
+    slug: [32m'saiyasu-syuri'[39m
+  }
+]
+MediaList - Error: [1mnull[22m
+ GET /dashboard/agent [32m200[39m in 1305ms
+ GET /favicon.ico?favicon.0b3bf435.ico [32m200[39m in 317ms
+ [32m[1m✓[22m[39m Compiled in 361ms
+ [32m[1m✓[22m[39m Compiled /dashboard/agent in 80ms
+MediaList - Data: [
+  {
+    id: [32m'801ded37-0017-483d-8d60-dd74cf916afd'[39m,
+    name: [32m'Mortorz'[39m,
+    slug: [32m'mortorz'[39m
+  },
+  {
+    id: [32m'4d3d6a03-3cf2-41b9-a23c-4b2d75bafa12'[39m,
+    name: [32m'ReRe'[39m,
+    slug: [32m'rere'[39m
+  },
+  {
+    id: [32m'57d62304-0ccd-4255-a128-5250e1469171'[39m,
+    name: [32m'最安修理'[39m,
+    slug: [32m'saiyasu-syuri'[39m
+  }
+]
+MediaList - Error: [1mnull[22m
+ GET /dashboard/agent [32m200[39m in 478ms
+ [32m[1m✓[22m[39m Compiled in 136ms
+ [32m[1m✓[22m[39m Compiled in 414ms
+ [32m[1m✓[22m[39m Compiled /dashboard/agent in 172ms
+MediaList - Data: [
+  {
+    id: [32m'801ded37-0017-483d-8d60-dd74cf916afd'[39m,
+    name: [32m'Mortorz'[39m,
+    slug: [32m'mortorz'[39m
+  },
+  {
+    id: [32m'4d3d6a03-3cf2-41b9-a23c-4b2d75bafa12'[39m,
+    name: [32m'ReRe'[39m,
+    slug: [32m'rere'[39m
+  },
+  {
+    id: [32m'57d62304-0ccd-4255-a128-5250e1469171'[39m,
+    name: [32m'最安修理'[39m,
+    slug: [32m'saiyasu-syuri'[39m
+  }
+]
+MediaList - Error: [1mnull[22m
+ GET /dashboard/agent [32m200[39m in 567ms
+ [32m[1m✓[22m[39m Compiled in 210ms
+ [33m[1m⚠[22m[39m Fast Refresh had to perform a full reload due to a runtime error.
+ [32m[1m✓[22m[39m Compiled in 399ms
+ [32m[1m✓[22m[39m Compiled /dashboard/agent in 174ms
+MediaList - Data: [
+  {
+    id: [32m'801ded37-0017-483d-8d60-dd74cf916afd'[39m,
+    name: [32m'Mortorz'[39m,
+    slug: [32m'mortorz'[39m
+  },
+  {
+    id: [32m'4d3d6a03-3cf2-41b9-a23c-4b2d75bafa12'[39m,
+    name: [32m'ReRe'[39m,
+    slug: [32m'rere'[39m
+  },
+  {
+    id: [32m'57d62304-0ccd-4255-a128-5250e1469171'[39m,
+    name: [32m'最安修理'[39m,
+    slug: [32m'saiyasu-syuri'[39m
+  }
+]
+MediaList - Error: [1mnull[22m
+ GET /dashboard/agent [32m200[39m in 1855ms
+ GET /favicon.ico?favicon.0b3bf435.ico [32m200[39m in 350ms
+ [32m[1m✓[22m[39m Compiled in 649ms
+ [32m[1m✓[22m[39m Compiled in 205ms
+ [33m[1m⚠[22m[39m Fast Refresh had to perform a full reload due to a runtime error.
+MediaList - Data: [
+  {
+    id: [32m'801ded37-0017-483d-8d60-dd74cf916afd'[39m,
+    name: [32m'Mortorz'[39m,
+    slug: [32m'mortorz'[39m
+  },
+  {
+    id: [32m'4d3d6a03-3cf2-41b9-a23c-4b2d75bafa12'[39m,
+    name: [32m'ReRe'[39m,
+    slug: [32m'rere'[39m
+  },
+  {
+    id: [32m'57d62304-0ccd-4255-a128-5250e1469171'[39m,
+    name: [32m'最安修理'[39m,
+    slug: [32m'saiyasu-syuri'[39m
+  }
+]
+MediaList - Error: [1mnull[22m
+ GET /dashboard/agent [32m200[39m in 3054ms
+ GET /favicon.ico?favicon.0b3bf435.ico [32m200[39m in 1660ms
+ [32m[1m✓[22m[39m Compiled in 112ms
+ [32m[1m✓[22m[39m Compiled in 130ms
+ [32m[1m✓[22m[39m Compiled in 91ms
+ [32m[1m✓[22m[39m Compiled in 350ms
+ [32m[1m✓[22m[39m Compiled /dashboard/agent in 63ms
+MediaList - Data: [
+  {
+    id: [32m'801ded37-0017-483d-8d60-dd74cf916afd'[39m,
+    name: [32m'Mortorz'[39m,
+    slug: [32m'mortorz'[39m
+  },
+  {
+    id: [32m'4d3d6a03-3cf2-41b9-a23c-4b2d75bafa12'[39m,
+    name: [32m'ReRe'[39m,
+    slug: [32m'rere'[39m
+  },
+  {
+    id: [32m'57d62304-0ccd-4255-a128-5250e1469171'[39m,
+    name: [32m'最安修理'[39m,
+    slug: [32m'saiyasu-syuri'[39m
+  }
+]
+MediaList - Error: [1mnull[22m
+ GET /dashboard/agent [32m200[39m in 390ms
+ [32m[1m✓[22m[39m Compiled in 308ms
+ [37m[1m○[22m[39m Compiling /dashboard/agent ...
+ [32m[1m✓[22m[39m Compiled /dashboard/agent in 679ms
+MediaList - Data: [
+  {
+    id: [32m'801ded37-0017-483d-8d60-dd74cf916afd'[39m,
+    name: [32m'Mortorz'[39m,
+    slug: [32m'mortorz'[39m
+  },
+  {
+    id: [32m'4d3d6a03-3cf2-41b9-a23c-4b2d75bafa12'[39m,
+    name: [32m'ReRe'[39m,
+    slug: [32m'rere'[39m
+  },
+  {
+    id: [32m'57d62304-0ccd-4255-a128-5250e1469171'[39m,
+    name: [32m'最安修理'[39m,
+    slug: [32m'saiyasu-syuri'[39m
+  }
+]
+MediaList - Error: [1mnull[22m
+ GET /dashboard/agent [32m200[39m in 1351ms

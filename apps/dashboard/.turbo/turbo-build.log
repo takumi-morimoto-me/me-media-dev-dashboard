@@ -1,0 +1,58 @@
+
+> dashboard@1.0.0 build /Users/t.morimoto/Desktop/me-media-dev-dashboard/apps/dashboard
+> next build --turbopack
+
+   ▲ Next.js 15.5.4 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 53ms
+ ✓ Compiled successfully in 3.3s
+   Linting and checking validity of types ...
+
+./src/components/financials/account-items-import.tsx
+102:10  Warning: 'uploadType' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/financials/financials-table.tsx
+205:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/supabase/middleware.ts
+18:48  Warning: 'options' is defined but never used.  @typescript-eslint/no-unused-vars
+35:13  Warning: 'user' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/supabase/server.ts
+18:20  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+27:20  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/11) ...
+   Generating static pages (2/11) 
+   Generating static pages (5/11) 
+   Generating static pages (8/11) 
+ ✓ Generating static pages (11/11)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                         Size  First Load JS
+┌ ○ /                                0 B         125 kB
+├ ○ /_not-found                      0 B         125 kB
+├ ƒ /api/account-items/delete        0 B            0 B
+├ ƒ /api/account-items/import        0 B            0 B
+├ ƒ /api/financials/import           0 B            0 B
+├ ƒ /api/media                       0 B            0 B
+├ ƒ /dashboard                       0 B         180 kB
+├ ƒ /dashboard/agent             76.1 kB         256 kB
+└ ƒ /dashboard/financials        12.3 kB         192 kB
++ First Load JS shared by all     138 kB
+  ├ chunks/2d4de9267bea94bc.js   17.9 kB
+  ├ chunks/753e53d64114daaf.js   59.2 kB
+  ├ chunks/a40459a4055e2ef1.js   17.2 kB
+  └ chunks/f2334a9fa165afa2.js   10.7 kB
+  ├ chunks/29100adb4996ebe5.css  12.8 kB
+  └ other shared chunks (total)  20.3 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
