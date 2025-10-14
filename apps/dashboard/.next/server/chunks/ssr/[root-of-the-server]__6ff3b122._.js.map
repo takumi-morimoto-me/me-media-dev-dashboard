@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 3, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":"","debugId":null}},
-    {"offset": {"line": 19, "column": 0}, "map": {"version":3,"sources":["file:///Users/t.morimoto/Desktop/me-media-dev-dashboard/apps/dashboard/src/app/dashboard/page.tsx"],"sourcesContent":["export default function DashboardPage() {\n  return (\n    <div>\n      <h1 className=\"text-2xl font-bold\">ダッシュボード</h1>\n      <p>ようこそ！</p>\n    </div>\n  );\n}"],"names":[],"mappings":";;;;;;AAAe,SAAS;IACtB,qBACE,6WAAC;;0BACC,6WAAC;gBAAG,WAAU;0BAAqB;;;;;;0BACnC,6WAAC;0BAAE;;;;;;;;;;;;AAGT","debugId":null}}]
-}
