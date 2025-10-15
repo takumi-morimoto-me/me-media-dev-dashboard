@@ -19,6 +19,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from "@/components/ui/table";
 import {
   DropdownMenu,
@@ -27,16 +28,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { MoreHorizontal, PlusCircle } from "lucide-react";
-import { AspForm, aspFormSchema } from "./asp-form";
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronsUpDown, MoreHorizontal, Trash2, Plus, PlusCircle } from "lucide-react";
 import { createAsp } from "@/actions/asp-actions";
-import { z } from "zod";
+import React from "react";
 
 // aspsテーブルの型
 type Asp = {
@@ -66,17 +64,12 @@ type EditingAsp = {
   login_url: string;
   media_id: string;
   isNew: boolean;
-};
-
-type EditingPrompt = {
-  aspId: string;
-  prompt: string;
+  displayIndex: number;
 };
 
 export function AgentClient({ asps, media }: AgentClientProps) {
   const [editingRows, setEditingRows] = useState<EditingAsp[]>([]);
-  const [editingPrompt, setEditingPrompt] = useState<EditingPrompt | null>(null);
-  const [isPromptDialogOpen, setIsPromptDialogOpen] = useState(false);
+  const [editingPrompts, setEditingPrompts] = useState<{ [key: string]: string }>({});
   const [isPending, startTransition] = useTransition();
 
   // メディアIDからメディア名を取得するヘルパー関数
@@ -86,14 +79,15 @@ export function AgentClient({ asps, media }: AgentClientProps) {
     return foundMedia?.name || "-";
   };
 
-  // 新しい行を追加
-  const handleAddNew = () => {
+  // 指定した位置に新しい編集行を挿入
+  const handleInsertRow = (index: number) => {
     const newRow: EditingAsp = {
       id: `temp-${Date.now()}`,
       name: "",
       login_url: "",
       media_id: "",
       isNew: true,
+      displayIndex: index,
     };
     setEditingRows([...editingRows, newRow]);
   };
@@ -110,36 +104,28 @@ export function AgentClient({ asps, media }: AgentClientProps) {
         name: row.name,
         login_url: row.login_url,
         media_id: row.media_id,
-        prompt: "", // 一旦空で保存、後でプロンプトを編集
+        prompt: "", // プロンプトは後で編集
       });
 
       if (result.error) {
         toast.error(result.error);
       } else {
-        toast.success("ASPを作成しました。プロンプトを設定してください。");
-        // 編集中の行を削除
+        toast.success("ASPを作成しました。");
         setEditingRows(editingRows.filter((r) => r.id !== row.id));
       }
     });
   };
 
-  // プロンプト編集を開く
-  const handleOpenPromptEdit = (aspId: string, currentPrompt: string) => {
-    setEditingPrompt({ aspId, prompt: currentPrompt });
-    setIsPromptDialogOpen(true);
-  };
-
   // プロンプトを保存
-  const handleSavePrompt = () => {
-    if (!editingPrompt || !editingPrompt.prompt.trim()) {
+  const handleSavePrompt = (aspId: string) => {
+    const prompt = editingPrompts[aspId];
+    if (prompt === undefined || !prompt.trim()) {
       toast.error("プロンプトを入力してください");
       return;
     }
-
     // TODO: プロンプト更新のAPI呼び出し
+    console.log("Saving prompt for", aspId, prompt);
     toast.success("プロンプトを保存しました");
-    setIsPromptDialogOpen(false);
-    setEditingPrompt(null);
   };
 
   // 編集をキャンセル
@@ -156,176 +142,191 @@ export function AgentClient({ asps, media }: AgentClientProps) {
     );
   };
 
+  const renderEditingRow = (row: EditingAsp) => (
+    <TableRow key={row.id} className="bg-muted/30">
+      <TableCell></TableCell>
+      <TableCell className="sticky left-0 z-10 bg-muted/30">
+        <Input
+          placeholder="ASP名を入力"
+          value={row.name}
+          onChange={(e) => handleUpdateRow(row.id, "name", e.target.value)}
+          className="h-8"
+        />
+      </TableCell>
+      <TableCell>
+        <Select
+          value={row.media_id}
+          onValueChange={(value) => handleUpdateRow(row.id, "media_id", value)}
+        >
+          <SelectTrigger className="h-8">
+            <SelectValue placeholder="メディアを選択" />
+          </SelectTrigger>
+          <SelectContent>
+            {media.map((m) => (
+              <SelectItem key={m.id} value={m.id}>
+                {m.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell>
+        <Input
+          placeholder="https://..."
+          value={row.login_url}
+          onChange={(e) => handleUpdateRow(row.id, "login_url", e.target.value)}
+          className="h-8"
+        />
+      </TableCell>
+      <TableCell colSpan={3} className="text-right">
+        <div className="flex gap-2 justify-end">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => handleCancelEdit(row.id)}
+            disabled={isPending}
+          >
+            キャンセル
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => handleSaveBasicInfo(row)}
+            disabled={isPending}
+          >
+            {isPending ? "保存中..." : "保存"}
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+
   return (
-    <>
+    <div className="space-y-4 pr-6">
       {/* Table */}
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="min-w-[150px]">ASP名</TableHead>
-              <TableHead className="min-w-[120px]">所属メディア</TableHead>
-              <TableHead className="min-w-[200px]">ログインURL</TableHead>
-              <TableHead className="w-[120px]">最終実行</TableHead>
-              <TableHead className="w-[80px]">ステータス</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {/* 既存のASP一覧 */}
-            {asps.map((asp) => (
-              <TableRow key={asp.id}>
-                <TableCell className="font-medium">{asp.name}</TableCell>
-                <TableCell>{getMediaName(asp.media_id)}</TableCell>
-                <TableCell>
-                  {asp.login_url ? (
-                    <a
-                      href={asp.login_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline text-sm truncate block max-w-[200px]"
-                      title={asp.login_url}
-                    >
-                      {asp.login_url}
-                    </a>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleOpenPromptEdit(asp.id, asp.prompt || "")}
-                    className="h-8"
-                  >
-                    プロンプト編集
+      <div className="rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[40px] p-0"></TableHead>
+                <TableHead className="sticky left-0 z-10 bg-muted min-w-[200px]">ASP名</TableHead>
+                <TableHead className="min-w-[120px]">所属メディア</TableHead>
+                <TableHead className="min-w-[250px]">ログインURL</TableHead>
+                <TableHead className="w-[100px]">最終実行</TableHead>
+                <TableHead className="w-[100px]">ステータス</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {editingRows.filter(r => r.displayIndex === 0).map(renderEditingRow)}
+              {asps.map((asp, index) => (
+                <React.Fragment key={asp.id}>
+                  <Collapsible asChild>
+                    <>
+                      <TableRow className="group hover:bg-muted/50">
+                        <TableCell className="relative p-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-1/2 -translate-y-1/2 left-[-14px] h-5 w-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-background"
+                            onClick={() => handleInsertRow(index + 1)}
+                          >
+                            <PlusCircle className="h-4 w-4" />
+                          </Button>
+                          <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <ChevronsUpDown className="h-4 w-4" />
+                              <span className="sr-only">詳細を開閉</span>
+                            </Button>
+                          </CollapsibleTrigger>
+                        </TableCell>
+                        <TableCell className="sticky left-0 z-10 bg-background font-medium">
+                          {asp.name}
+                        </TableCell>
+                        <TableCell>{getMediaName(asp.media_id)}</TableCell>
+                        <TableCell>
+                          {asp.login_url ? (
+                            <a
+                              href={asp.login_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline text-sm truncate block max-w-[250px]"
+                              title={asp.login_url}
+                            >
+                              {asp.login_url}
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">-</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">-</TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">メニューを開く</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>今すぐ実行</DropdownMenuItem>
+                              <DropdownMenuItem>編集</DropdownMenuItem>
+                              <DropdownMenuItem className="text-red-500" onClick={() => toast.error("削除機能は未実装です")}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                削除
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                      <CollapsibleContent asChild>
+                        <tr className="bg-muted/20 hover:bg-muted/40">
+                          <td colSpan={7} className="p-0">
+                            <div className="p-4 space-y-2">
+                              <label className="text-sm font-medium">プロンプト</label>
+                              <Textarea
+                                placeholder="例:&#10;1. {login_url}にアクセスする&#10;2. ユーザー名フィールドに{SECRET:ASP_USERNAME}を入力..."
+                                value={editingPrompts[asp.id] ?? asp.prompt ?? ""}
+                                onChange={(e) =>
+                                  setEditingPrompts({
+                                    ...editingPrompts,
+                                    [asp.id]: e.target.value,
+                                  })
+                                }
+                                className="min-h-[200px] font-mono text-sm bg-background"
+                              />
+                              <div className="flex items-center justify-between">
+                                 <p className="text-xs text-muted-foreground">
+                                  AIへの操作指示を記述します。シークレットは {`{SECRET:KEY}`} 形式で参照します。
+                                 </p>
+                                <Button onClick={() => handleSavePrompt(asp.id)} size="sm">
+                                  プロンプトを保存
+                                </Button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      </CollapsibleContent>
+                    </>
+                  </Collapsible>
+                  {editingRows.filter(r => r.displayIndex === index + 1).map(renderEditingRow)}
+                </React.Fragment>
+              ))}
+            </TableBody>
+            <TableFooter>
+              <TableRow>
+                <TableCell colSpan={7}>
+                  <Button onClick={() => handleInsertRow(asps.length)} size="sm" variant="ghost" className="w-full justify-start">
+                    <Plus className="h-4 w-4 mr-2" />
+                    新規ASPを追加
                   </Button>
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">-</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">メニューを開く</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>今すぐ実行</DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-500">削除</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
               </TableRow>
-            ))}
-
-            {/* 編集中の新規行 */}
-            {editingRows.map((row) => (
-              <TableRow key={row.id} className="bg-muted/30">
-                <TableCell>
-                  <Input
-                    placeholder="ASP名"
-                    value={row.name}
-                    onChange={(e) => handleUpdateRow(row.id, "name", e.target.value)}
-                    className="h-8"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Select
-                    value={row.media_id}
-                    onValueChange={(value) => handleUpdateRow(row.id, "media_id", value)}
-                  >
-                    <SelectTrigger className="h-8">
-                      <SelectValue placeholder="選択" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {media.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  <Input
-                    placeholder="https://..."
-                    value={row.login_url}
-                    onChange={(e) => handleUpdateRow(row.id, "login_url", e.target.value)}
-                    className="h-8"
-                  />
-                </TableCell>
-                <TableCell colSpan={3} className="text-right">
-                  <div className="flex gap-2 justify-end">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleCancelEdit(row.id)}
-                      disabled={isPending}
-                    >
-                      キャンセル
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => handleSaveBasicInfo(row)}
-                      disabled={isPending}
-                    >
-                      {isPending ? "保存中..." : "保存"}
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableFooter>
+          </Table>
+        </div>
       </div>
-
-      {/* Add new button outside table - Notion style */}
-      <button
-        onClick={handleAddNew}
-        className="mt-2 px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded flex items-center gap-2 transition-colors"
-      >
-        <PlusCircle className="h-4 w-4" />
-        <span>新規</span>
-      </button>
-
-      {/* Prompt Edit Dialog */}
-      <Dialog open={isPromptDialogOpen} onOpenChange={setIsPromptDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>プロンプトを編集</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Textarea
-              placeholder="例:&#10;1. {login_url}にアクセスする&#10;2. ユーザー名フィールドに{SECRET:ASP_USERNAME}を入力&#10;3. パスワードフィールドに{SECRET:ASP_PASSWORD}を入力&#10;4. 「ログイン」ボタンをクリック&#10;5. 「レポート」メニューをクリック&#10;6. 「成果報酬」のテーブルから昨日の確定報酬額を取得"
-              value={editingPrompt?.prompt || ""}
-              onChange={(e) =>
-                setEditingPrompt(
-                  editingPrompt ? { ...editingPrompt, prompt: e.target.value } : null
-                )
-              }
-              className="min-h-[400px] font-mono text-sm"
-            />
-            <p className="text-xs text-muted-foreground">
-              AIエージェントへの操作指示を自然言語で記述してください。
-              シークレット情報は {`{SECRET:KEY_NAME}`} 形式で記述します。
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setIsPromptDialogOpen(false);
-                  setEditingPrompt(null);
-                }}
-              >
-                キャンセル
-              </Button>
-              <Button onClick={handleSavePrompt}>保存</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+    </div>
   );
 }
