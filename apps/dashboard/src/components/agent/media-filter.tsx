@@ -28,7 +28,7 @@ interface MediaFilterProps {
   onSelectMedia: (mediaId: string | null) => void;
 }
 
-export function MediaFilter({ media, asps, credentials, selectedMediaId, onSelectMedia }: MediaFilterProps) {
+export function MediaFilter({ media, credentials, selectedMediaId, onSelectMedia }: MediaFilterProps) {
   // 各メディアごとのASP数をカウント（credentialsベース）
   const getAspCount = (mediaId: string | null) => {
     if (mediaId === null) {

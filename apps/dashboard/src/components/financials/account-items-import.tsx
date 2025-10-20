@@ -99,13 +99,10 @@ export default function AccountItemsImport({ mediaId, onImportComplete, dataToEx
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedCSVData | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadType, setUploadType] = useState<'budget' | 'actual'>('budget');
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>, type: 'budget' | 'actual') => {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    setUploadType(type);
 
     try {
       const text = await file.text();

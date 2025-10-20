@@ -2,6 +2,13 @@ import dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });
 
+interface DailyActualRow {
+  date: string;
+  amount: number;
+  media?: { name: string };
+  asp?: { name: string };
+}
+
 async function checkDailyActuals() {
   const { createClient } = await import('@supabase/supabase-js');
 
@@ -35,7 +42,7 @@ async function checkDailyActuals() {
 
   if (data && data.length > 0) {
     let total = 0;
-    data.forEach((item: any) => {
+    data.forEach((item: DailyActualRow) => {
       console.log(
         `${item.date} | ${item.amount.toLocaleString()}円 | ` +
         `メディア: ${item.media?.name} | ASP: ${item.asp?.name}`
@@ -55,7 +62,7 @@ async function checkDailyActuals() {
       .lte('date', '2025-09-30');
 
     if (septemberData) {
-      const septemberTotal = septemberData.reduce((sum: number, item: any) => sum + item.amount, 0);
+      const septemberTotal = septemberData.reduce((sum: number, item: { amount: number }) => sum + item.amount, 0);
       console.log(`\n📅 2025年9月の合計: ${septemberTotal.toLocaleString()}円 (${septemberData.length}件)`);
     }
   } else {

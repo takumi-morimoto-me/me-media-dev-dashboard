@@ -202,7 +202,7 @@ export default function FinancialsTable({
       toast.success("項目を削除しました。");
       setSelectedItems(new Set());
       onDataChange?.();
-    } catch (error) {
+    } catch {
       toast.error("削除に失敗しました。");
     } finally {
       setIsDeleting(false);

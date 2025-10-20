@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server';
 import dotenv from 'dotenv';
 
 // .env.localファイルを読み込む

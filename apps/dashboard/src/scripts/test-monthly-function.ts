@@ -2,6 +2,13 @@ import dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });
 
+interface MonthlyDataRow {
+  item_year: number;
+  item_month: number;
+  budget: number;
+  actual: number;
+}
+
 async function testMonthlyFunction() {
   const { createClient } = await import('@supabase/supabase-js');
 
@@ -22,7 +29,7 @@ async function testMonthlyFunction() {
   } else {
     console.log(`✅ 成功！データ件数: ${data?.length}`);
     console.log('\n📊 最初の10件:');
-    data?.slice(0, 10).forEach((row: any) => {
+    data?.slice(0, 10).forEach((row: MonthlyDataRow) => {
       console.log(`${row.item_year}/${row.item_month} | 予算: ${row.budget.toLocaleString()}円 | 実績: ${row.actual.toLocaleString()}円`);
     });
   }
