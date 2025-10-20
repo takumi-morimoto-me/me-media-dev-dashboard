@@ -61,3 +61,8 @@ __pycache__/
 *.swp
 *.swo
 *~
+
+# Playwright screenshots
+screenshots/
+*-error.png
+after-login.png

@@ -5,7 +5,7 @@
   "scripts": {
     "lint": "ruff check . && black --check .",
     "format": "ruff check . --fix && black .",
-    "build": "docker build --no-cache -t mcp-agent .",
+    "build": "if [ \"$VERCEL\" = \"1\" ]; then echo 'Skipping Docker build on Vercel'; else docker build --no-cache -t mcp-agent .; fi",
     "dev": "bash -c 'source venv/bin/activate && python main.py'"
   }
 }

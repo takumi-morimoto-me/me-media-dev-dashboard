@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -14,23 +13,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-// バリデーションスキーマ
-export const aspFormSchema = z.object({
-  name: z.string().min(1, { message: "ASP名は必須です。" }),
-  login_url: z.string().url({ message: "有効なURLを入力してください。" }),
-  media_id: z.string().uuid({ message: "メディアを選択してください。" }),
-  prompt: z.string().min(1, { message: "プロンプトは必須です。" }),
-});
-
-type AspFormValues = z.infer<typeof aspFormSchema>;
+import { Checkbox } from "@/components/ui/checkbox";
+import { aspFormSchema, type AspFormValues } from "@/lib/validations/asp";
+import { useState } from "react";
 
 type Media = {
   id: string;
@@ -45,27 +30,49 @@ interface AspFormProps {
 }
 
 export function AspForm({ media, onSubmit, isPending, defaultValues }: AspFormProps) {
+  const [selectedMediaIds, setSelectedMediaIds] = useState<string[]>([]);
+
   const form = useForm<AspFormValues>({
     resolver: zodResolver(aspFormSchema),
     defaultValues: {
-      name: defaultValues?.name || "",
-      login_url: defaultValues?.login_url || "",
-      media_id: defaultValues?.media_id || "",
-      prompt: defaultValues?.prompt || "",
+      name: defaultValues?.name ?? "",
+      login_url: defaultValues?.login_url ?? "",
+      prompt: defaultValues?.prompt ?? "",
+      credentials: defaultValues?.credentials ?? [],
     },
   });
 
+  const handleMediaToggle = (mediaId: string) => {
+    const newSelectedIds = selectedMediaIds.includes(mediaId)
+      ? selectedMediaIds.filter(id => id !== mediaId)
+      : [...selectedMediaIds, mediaId];
+
+    setSelectedMediaIds(newSelectedIds);
+
+    // credentialsを更新
+    const newCredentials = newSelectedIds.map(id => {
+      const existing = form.getValues("credentials").find(c => c.media_id === id);
+      return existing || {
+        media_id: id,
+        username_secret_key: "",
+        password_secret_key: "",
+      };
+    });
+
+    form.setValue("credentials", newCredentials);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-2xl mx-auto p-6 space-y-6">
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>ASP名</FormLabel>
+            <FormItem className="space-y-3">
+              <FormLabel className="text-base">ASP名</FormLabel>
               <FormControl>
-                <Input placeholder="A8.net" {...field} />
+                <Input placeholder="A8.net" {...field} className="h-11" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -75,10 +82,10 @@ export function AspForm({ media, onSubmit, isPending, defaultValues }: AspFormPr
           control={form.control}
           name="login_url"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>ログインURL</FormLabel>
+            <FormItem className="space-y-3">
+              <FormLabel className="text-base">ログインURL</FormLabel>
               <FormControl>
-                <Input placeholder="https://www.a8.net/" {...field} />
+                <Input placeholder="https://www.a8.net/" {...field} className="h-11" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -86,42 +93,83 @@ export function AspForm({ media, onSubmit, isPending, defaultValues }: AspFormPr
         />
         <FormField
           control={form.control}
-          name="media_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>所属メディア</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="メディアを選択" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {media.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
+          name="credentials"
+          render={() => (
+            <FormItem className="space-y-3">
+              <FormLabel className="text-base">メディア選択</FormLabel>
+              <div className="space-y-2">
+                {media.map((m) => (
+                  <div key={m.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={m.id}
+                      checked={selectedMediaIds.includes(m.id)}
+                      onCheckedChange={() => handleMediaToggle(m.id)}
+                    />
+                    <label htmlFor={m.id} className="text-sm cursor-pointer">
                       {m.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </label>
+                  </div>
+                ))}
+              </div>
               <FormMessage />
             </FormItem>
           )}
         />
+
+        {/* 選択されたメディアごとの認証情報入力 */}
+        {selectedMediaIds.length > 0 && (
+          <div className="space-y-4 border-t pt-4">
+            <h3 className="text-base font-medium">認証情報設定</h3>
+            {selectedMediaIds.map((mediaId, index) => {
+              const mediaName = media.find(m => m.id === mediaId)?.name;
+              return (
+                <div key={mediaId} className="space-y-3 p-4 bg-muted/50 rounded-lg">
+                  <h4 className="text-sm font-medium">{mediaName}</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField
+                      control={form.control}
+                      name={`credentials.${index}.username_secret_key`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">ユーザー名シークレットキー</FormLabel>
+                          <FormControl>
+                            <Input placeholder="ASP_USERNAME" {...field} className="h-9" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`credentials.${index}.password_secret_key`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">パスワードシークレットキー</FormLabel>
+                          <FormControl>
+                            <Input placeholder="ASP_PASSWORD" {...field} className="h-9" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
         <FormField
           control={form.control}
           name="prompt"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>操作プロンプト</FormLabel>
+            <FormItem className="space-y-3">
+              <FormLabel className="text-base">操作プロンプト</FormLabel>
               <FormControl>
                 <Textarea
                   placeholder="例:&#10;1. {login_url}にアクセスする&#10;2. ユーザー名フィールドに{SECRET:ASP_USERNAME}を入力&#10;3. パスワードフィールドに{SECRET:ASP_PASSWORD}を入力&#10;4. 「ログイン」ボタンをクリック&#10;5. 「レポート」メニューをクリック&#10;6. 「成果報酬」のテーブルから昨日の確定報酬額を取得"
-                  className="min-h-[300px] font-mono text-sm"
+                  className="min-h-[300px] font-mono text-sm p-4"
                   {...field}
                 />
               </FormControl>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-xs text-muted-foreground">
                 AIエージェントへの操作指示を自然言語で記述してください。
                 シークレット情報は {`{SECRET:KEY_NAME}`} 形式で記述します。
               </p>
@@ -129,8 +177,8 @@ export function AspForm({ media, onSubmit, isPending, defaultValues }: AspFormPr
             </FormItem>
           )}
         />
-        <div className="flex justify-end">
-          <Button type="submit" disabled={isPending}>
+        <div className="flex justify-end pt-4">
+          <Button type="submit" disabled={isPending} className="px-8">
             {isPending ? "保存中..." : "保存"}
           </Button>
         </div>
