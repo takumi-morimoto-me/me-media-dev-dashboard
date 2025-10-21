@@ -14,7 +14,7 @@ export default async function FinancialsPage({ searchParams }: FinancialsPagePro
   const supabase = await createClient();
   const params = await searchParams;
 
-  // Parallel fetch for settings, monthly data, daily data, and account items
+  // Parallel fetch for settings, monthly data, daily data, account items, and ASP data
   const settingPromise = supabase
     .from('app_settings')
     .select('value')
@@ -35,6 +35,16 @@ export default async function FinancialsPage({ searchParams }: FinancialsPagePro
     p_fiscal_year: year,
   });
 
+  const aspMonthlyDataPromise = supabase.rpc('get_asp_monthly_data', {
+    p_media_id: mediaId,
+    p_fiscal_year: year,
+  });
+
+  const aspDailyDataPromise = supabase.rpc('get_asp_daily_data', {
+    p_media_id: mediaId,
+    p_fiscal_year: year,
+  });
+
   const accountItemsPromise = mediaId
     ? supabase
         .from('account_items')
@@ -48,11 +58,15 @@ export default async function FinancialsPage({ searchParams }: FinancialsPagePro
     { data: setting, error: settingError },
     { data: monthlyData, error: monthlyDataError },
     { data: dailyData, error: dailyDataError },
+    { data: aspMonthlyData, error: aspMonthlyDataError },
+    { data: aspDailyData, error: aspDailyDataError },
     { data: accountItems, error: accountItemsError }
   ] = await Promise.all([
     settingPromise,
     monthlyDataPromise,
     dailyDataPromise,
+    aspMonthlyDataPromise,
+    aspDailyDataPromise,
     accountItemsPromise
   ]);
 
@@ -62,12 +76,14 @@ export default async function FinancialsPage({ searchParams }: FinancialsPagePro
     console.error("Error fetching fiscal year start month setting:", settingError);
   }
 
-  if (monthlyDataError || dailyDataError || accountItemsError) {
-    console.error("Error fetching page data:", { monthlyDataError, dailyDataError, accountItemsError });
+  if (monthlyDataError || dailyDataError || accountItemsError || aspMonthlyDataError || aspDailyDataError) {
+    console.error("Error fetching page data:", { monthlyDataError, dailyDataError, accountItemsError, aspMonthlyDataError, aspDailyDataError });
     return (
       <FinancialsClient
         monthlyData={[]}
         dailyData={[]}
+        aspMonthlyData={[]}
+        aspDailyData={[]}
         accountItems={[]}
         fiscalYearStartMonth={fiscalYearStartMonth}
       />
@@ -78,6 +94,8 @@ export default async function FinancialsPage({ searchParams }: FinancialsPagePro
     <FinancialsClient
       monthlyData={monthlyData || []}
       dailyData={dailyData || []}
+      aspMonthlyData={aspMonthlyData || []}
+      aspDailyData={aspDailyData || []}
       accountItems={accountItems || []}
       fiscalYearStartMonth={fiscalYearStartMonth}
     />

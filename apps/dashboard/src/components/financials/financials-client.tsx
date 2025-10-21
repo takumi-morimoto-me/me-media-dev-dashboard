@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import FinancialsTable from "@/components/financials/financials-table";
+import AspFinancialsTable from "@/components/financials/asp-financials-table";
 import AccountItemsImport from "@/components/financials/account-items-import";
 import { Button } from "@/components/ui/button";
 import { Filter, X } from "lucide-react";
@@ -27,6 +28,21 @@ interface DailyData {
   actual: number;
 }
 
+interface AspMonthlyData {
+  item_year: number;
+  item_month: number;
+  asp_id: string;
+  asp_name: string;
+  actual: number;
+}
+
+interface AspDailyData {
+  item_date: string;
+  asp_id: string;
+  asp_name: string;
+  actual: number;
+}
+
 interface AccountItem {
   id: string;
   name: string;
@@ -41,6 +57,8 @@ interface ClientAccountItem extends AccountItem {
 interface FinancialsClientProps {
   monthlyData: MonthlyData[];
   dailyData: DailyData[];
+  aspMonthlyData: AspMonthlyData[];
+  aspDailyData: AspDailyData[];
   accountItems: AccountItem[];
   fiscalYearStartMonth: number;
 }
@@ -70,7 +88,7 @@ const getEndOfWeek = (year: number, week: number) => {
   return endOfWeek;
 };
 
-export default function FinancialsClient({ monthlyData, dailyData, accountItems, fiscalYearStartMonth }: FinancialsClientProps) {
+export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyData, aspDailyData, accountItems, fiscalYearStartMonth }: FinancialsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -224,6 +242,89 @@ export default function FinancialsClient({ monthlyData, dailyData, accountItems,
     return { headers, rows: rootItems, data: aggregatedData };
 
   }, [monthlyData, dailyData, accountItems, displayUnit, fiscalYearStartMonth, selectedYear]);
+
+  const aspTableData = useMemo(() => {
+    // Extract unique ASPs
+    const aspMap = new Map<string, { asp_id: string; asp_name: string }>();
+    [...aspMonthlyData, ...aspDailyData].forEach(item => {
+      if (!aspMap.has(item.asp_id)) {
+        aspMap.set(item.asp_id, { asp_id: item.asp_id, asp_name: item.asp_name });
+      }
+    });
+    const rows = Array.from(aspMap.values()).sort((a, b) => a.asp_name.localeCompare(b.asp_name));
+
+    const headers: { key: string; label: string }[] = [];
+    const aggregatedData: { [aspId: string]: { [headerKey: string]: number } } = {};
+
+    const fiscalStartDate = new Date(selectedYear, fiscalYearStartMonth - 1, 1);
+    const fiscalEndDate = new Date(selectedYear + 1, fiscalYearStartMonth - 1, 0);
+
+    if (displayUnit === 'monthly') {
+      const months = Array.from({ length: 12 }, (_, i) => ((i + fiscalYearStartMonth - 1) % 12) + 1);
+      months.forEach(m => headers.push({ key: `m-${m}`, label: `${m}月` }));
+
+      rows.forEach(asp => {
+        aggregatedData[asp.asp_id] = {};
+        headers.forEach(h => {
+          const month = parseInt(h.key.split('-')[1]);
+          const monthData = aspMonthlyData.filter(d => d.asp_id === asp.asp_id && d.item_month === month);
+          aggregatedData[asp.asp_id][h.key] = monthData.reduce((sum, d) => sum + d.actual, 0);
+        });
+      });
+    } else if (displayUnit === 'weekly') {
+      const weekMap = new Map<string, { year: number, week: number, start: Date, end: Date }>();
+      const weekLoopDate = new Date(fiscalStartDate);
+      while (weekLoopDate <= fiscalEndDate) {
+        const { year, week } = getWeek(weekLoopDate);
+        const key = `w-${year}-${week}`;
+        if (!weekMap.has(key)) {
+          const startOfWeek = getStartOfWeek(year, week);
+          const endOfWeek = getEndOfWeek(year, week);
+          weekMap.set(key, { year, week, start: startOfWeek, end: endOfWeek });
+        }
+        weekLoopDate.setDate(weekLoopDate.getDate() + 1);
+      }
+      Array.from(weekMap.values()).sort((a,b) => a.year - b.year || a.week - b.week).forEach(({ year, week, start, end }) => {
+        headers.push({ key: `w-${year}-${week}`, label: `${start.getMonth()+1}/${start.getDate()}-${end.getMonth()+1}/${end.getDate()}` });
+      });
+
+      rows.forEach(asp => {
+        aggregatedData[asp.asp_id] = {};
+        headers.forEach(h => {
+          const [, year, week] = h.key.split('-').map(Number);
+          const startOfWeek = getStartOfWeek(year, week);
+          const endOfWeek = getEndOfWeek(year, week);
+          const weekData = aspDailyData.filter(d => {
+            if (d.asp_id !== asp.asp_id) return false;
+            const itemDate = new Date(d.item_date);
+            return itemDate >= startOfWeek && itemDate <= endOfWeek;
+          });
+          aggregatedData[asp.asp_id][h.key] = weekData.reduce((sum, d) => sum + d.actual, 0);
+        });
+      });
+    } else if (displayUnit === 'daily') {
+      const currentDate = new Date(fiscalStartDate);
+      while (currentDate <= fiscalEndDate) {
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        const dateKey = `${year}-${month}-${day}`;
+        headers.push({ key: `d-${dateKey}`, label: `${currentDate.getMonth()+1}/${currentDate.getDate()}` });
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      rows.forEach(asp => {
+        aggregatedData[asp.asp_id] = {};
+        headers.forEach(h => {
+          const dateKey = h.key.substring(2);
+          const dayData = aspDailyData.filter(d => d.asp_id === asp.asp_id && d.item_date === dateKey);
+          aggregatedData[asp.asp_id][h.key] = dayData.reduce((sum, d) => sum + d.actual, 0);
+        });
+      });
+    }
+
+    return { headers, rows, data: aggregatedData };
+  }, [aspMonthlyData, aspDailyData, displayUnit, fiscalYearStartMonth, selectedYear]);
 
   const activeFiltersCount = (selectedYear !== currentYearNum ? 1 : 0) + (viewMode !== 'all' ? 1 : 0);
 
@@ -392,6 +493,17 @@ export default function FinancialsClient({ monthlyData, dailyData, accountItems,
         viewMode={viewMode}
         onDataChange={handleImportComplete}
       />
+
+      {aspTableData.rows.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold">ASP別売上</h3>
+          <AspFinancialsTable
+            headers={aspTableData.headers}
+            rows={aspTableData.rows}
+            data={aspTableData.data}
+          />
+        </div>
+      )}
     </div>
   );
 }
