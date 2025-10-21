@@ -10,8 +10,11 @@
     "scrape:a8net:daily": "tsx src/scripts/a8net-daily-scraper.ts",
     "scrape:a8net:daily:all": "tsx src/scripts/scrape-all-months.ts",
     "scrape:a8net:monthly": "tsx src/scripts/a8net-monthly-scraper.ts",
+    "scrape:moshimo:daily": "tsx src/scripts/moshimo-daily-scraper.ts",
+    "scrape:moshimo:daily:all": "tsx src/scripts/moshimo-scrape-all-months.ts",
     "db:check": "tsx src/scripts/check-db-data.ts",
     "db:check-actuals": "tsx src/scripts/check-daily-actuals.ts",
+    "db:check-moshimo": "tsx src/scripts/check-moshimo-actuals.ts",
     "db:check-tables": "tsx src/scripts/check-tables.ts"
   },
   "dependencies": {
