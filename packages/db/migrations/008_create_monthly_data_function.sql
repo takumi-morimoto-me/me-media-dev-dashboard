@@ -31,6 +31,7 @@ BEGIN
 
     RETURN QUERY
     WITH budget_data AS (
+        -- Get data from budgets table
         SELECT
             EXTRACT(YEAR FROM b.date)::integer AS year,
             EXTRACT(MONTH FROM b.date)::integer AS month,
@@ -43,8 +44,25 @@ BEGIN
             (p_media_id IS NULL OR b.media_id = p_media_id)
             AND b.date BETWEEN start_date AND end_date
         GROUP BY EXTRACT(YEAR FROM b.date), EXTRACT(MONTH FROM b.date), b.account_item_id
+
+        UNION ALL
+
+        -- Get data from daily_budgets table
+        SELECT
+            EXTRACT(YEAR FROM db.date)::integer AS year,
+            EXTRACT(MONTH FROM db.date)::integer AS month,
+            db.account_item_id,
+            SUM(db.amount)::numeric AS budget,
+            0::numeric AS actual
+        FROM
+            daily_budgets db
+        WHERE
+            (p_media_id IS NULL OR db.media_id = p_media_id)
+            AND db.date BETWEEN start_date AND end_date
+        GROUP BY EXTRACT(YEAR FROM db.date), EXTRACT(MONTH FROM db.date), db.account_item_id
     ),
     actual_data AS (
+        -- Get data from actuals table
         SELECT
             EXTRACT(YEAR FROM a.date)::integer AS year,
             EXTRACT(MONTH FROM a.date)::integer AS month,
@@ -57,6 +75,22 @@ BEGIN
             (p_media_id IS NULL OR a.media_id = p_media_id)
             AND a.date BETWEEN start_date AND end_date
         GROUP BY EXTRACT(YEAR FROM a.date), EXTRACT(MONTH FROM a.date), a.account_item_id
+
+        UNION ALL
+
+        -- Get data from daily_actuals table
+        SELECT
+            EXTRACT(YEAR FROM da.date)::integer AS year,
+            EXTRACT(MONTH FROM da.date)::integer AS month,
+            da.account_item_id,
+            0::numeric AS budget,
+            SUM(da.amount)::numeric AS actual
+        FROM
+            daily_actuals da
+        WHERE
+            (p_media_id IS NULL OR da.media_id = p_media_id)
+            AND da.date BETWEEN start_date AND end_date
+        GROUP BY EXTRACT(YEAR FROM da.date), EXTRACT(MONTH FROM da.date), da.account_item_id
     ),
     combined_data AS (
         SELECT * FROM budget_data

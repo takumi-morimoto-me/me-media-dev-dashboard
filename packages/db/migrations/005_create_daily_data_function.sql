@@ -30,6 +30,7 @@ BEGIN
 
     RETURN QUERY
     WITH budget_data AS (
+        -- Get data from daily_budgets table
         SELECT
             db.date,
             db.account_item_id,
@@ -41,8 +42,24 @@ BEGIN
             (p_media_id IS NULL OR db.media_id = p_media_id)
             AND db.date BETWEEN start_date AND end_date
         GROUP BY db.date, db.account_item_id
+
+        UNION ALL
+
+        -- Get data from budgets table
+        SELECT
+            b.date,
+            b.account_item_id,
+            SUM(b.amount)::numeric AS budget,
+            0::numeric AS actual
+        FROM
+            budgets b
+        WHERE
+            (p_media_id IS NULL OR b.media_id = p_media_id)
+            AND b.date BETWEEN start_date AND end_date
+        GROUP BY b.date, b.account_item_id
     ),
     actual_data AS (
+        -- Get data from daily_actuals table
         SELECT
             da.date,
             da.account_item_id,
@@ -54,6 +71,21 @@ BEGIN
             (p_media_id IS NULL OR da.media_id = p_media_id)
             AND da.date BETWEEN start_date AND end_date
         GROUP BY da.date, da.account_item_id
+
+        UNION ALL
+
+        -- Get data from actuals table
+        SELECT
+            a.date,
+            a.account_item_id,
+            0::numeric AS budget,
+            SUM(a.amount)::numeric AS actual
+        FROM
+            actuals a
+        WHERE
+            (p_media_id IS NULL OR a.media_id = p_media_id)
+            AND a.date BETWEEN start_date AND end_date
+        GROUP BY a.date, a.account_item_id
     ),
     combined_data AS (
         SELECT * FROM budget_data
