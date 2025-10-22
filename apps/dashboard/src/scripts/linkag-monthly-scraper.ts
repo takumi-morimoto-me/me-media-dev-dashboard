@@ -8,20 +8,21 @@ interface LinkAGCredentials {
   password: string;
 }
 
-interface DailyData {
-  date: string;
+interface MonthlyData {
+  yearMonth: string; // YYYY-MM format
   confirmedRevenue: string;
 }
 
 interface ScraperConfig {
   headless?: boolean;
-  month?: string;
+  startYearMonth: string; // YYYYMM format (e.g., "202501")
+  endYearMonth: string; // YYYYMM format (e.g., "202510")
   mediaId: string;
   accountItemId: string;
   aspId: string;
 }
 
-export class LinkAGDailyScraper {
+export class LinkAGMonthlyScraper {
   private browser: Browser | null = null;
   private page: Page | null = null;
   private credentials: LinkAGCredentials;
@@ -35,7 +36,7 @@ export class LinkAGDailyScraper {
   async initialize() {
     console.log('🚀 ブラウザを起動しています...');
     this.browser = await chromium.launch({
-      headless: this.config.headless ?? false, // デバッグのためfalse
+      headless: this.config.headless ?? true,
       slowMo: this.config.headless ? 0 : 500,
     });
 
@@ -64,72 +65,103 @@ export class LinkAGDailyScraper {
     });
     await this.page.waitForTimeout(3000);
 
-    // スクリーンショット（デバッグ用）
-    await this.page.screenshot({ path: 'screenshots/linkag-login-page.png', fullPage: true });
-    console.log('📸 ログインページのスクリーンショット保存');
-
     // パートナーログインセクションの入力フィールドを探す
-    // text/email/password inputのみを取得
     const textInputs = await this.page.locator('input[type="text"], input[type="email"], input:not([type])').all();
     const passwordInputs = await this.page.locator('input[type="password"]').all();
 
-    console.log(`テキスト入力フィールド数: ${textInputs.length}`);
-    console.log(`パスワード入力フィールド数: ${passwordInputs.length}`);
-
     if (textInputs.length >= 2 && passwordInputs.length >= 2) {
-      // 最初の2つがパートナーログイン（ログインID、パスワード）
-      console.log('パートナーログインにログインID入力中...');
       await textInputs[0].fill(this.credentials.username);
-
-      console.log('パスワード入力中...');
       await passwordInputs[0].fill(this.credentials.password);
-
       await this.page.waitForTimeout(1000);
 
-      // ログインボタンをクリック
-      // button, input[type="submit"], aタグなど色々な可能性がある
       const loginButtons = await this.page.locator('button:has-text("ログイン"), input[type="submit"][value*="ログイン"], a:has-text("ログイン")').all();
-      console.log(`ログインボタン数: ${loginButtons.length}`);
 
       if (loginButtons.length > 0) {
-        console.log('パートナーログインボタンをクリック中...');
         await loginButtons[0].click();
         await this.page.waitForTimeout(5000);
-
-        await this.page.screenshot({ path: 'screenshots/linkag-after-login.png', fullPage: true });
-        console.log('📸 ログイン後のスクリーンショット保存');
-      } else {
-        console.log('⚠️  ログインボタンが見つかりません');
-        // すべてのbuttonとinput[type="submit"]を探す
-        const allButtons = await this.page.locator('button, input[type="submit"]').all();
-        console.log(`全ボタン数: ${allButtons.length}`);
-
-        if (allButtons.length >= 2) {
-          console.log('最初のボタン（パートナーログイン用と推定）をクリック中...');
-          await allButtons[0].click();
-          await this.page.waitForTimeout(5000);
-
-          await this.page.screenshot({ path: 'screenshots/linkag-after-login.png', fullPage: true });
-          console.log('📸 ログイン後のスクリーンショット保存');
-        }
       }
-    } else {
-      console.log('⚠️  ログインフィールドが見つかりませんでした');
     }
 
     console.log('✅ ログイン処理完了');
   }
 
-  async extractDailyData(): Promise<DailyData[]> {
+  async navigateToMonthlyReport() {
     if (!this.page) {
       throw new Error('Browser not initialized.');
     }
 
-    console.log('📊 日別データ取得中...');
+    console.log('📊 月別レポートページに移動中...');
 
-    const data: DailyData[] = [];
+    // 月別レポートページに直接移動
+    await this.page.goto('https://link-ag.net/partner/summaries', {
+      waitUntil: 'domcontentloaded',
+    });
+    await this.page.waitForTimeout(3000);
 
-    // ダッシュボードに日別レポートのテーブルがある
+    await this.page.screenshot({ path: 'screenshots/linkag-monthly-page.png', fullPage: true });
+    console.log('📸 月別レポートページのスクリーンショット保存');
+
+    // 期間選択
+    console.log(`📅 期間選択: ${this.config.startYearMonth} ～ ${this.config.endYearMonth}`);
+
+    // YYYYMM形式をYYYY-MM形式に変換
+    const formatYearMonth = (yyyymm: string) => {
+      const year = yyyymm.substring(0, 4);
+      const month = yyyymm.substring(4, 6);
+      return `${year}-${month}`;
+    };
+
+    const startFormatted = formatYearMonth(this.config.startYearMonth);
+    const endFormatted = formatYearMonth(this.config.endYearMonth);
+
+    // 期間選択の入力フィールドを探す（type="month"または特定のvalue）
+    const inputs = await this.page.locator('input[type="text"], input[type="month"], input:not([type="hidden"]):not([type="submit"]):not([type="button"])').all();
+
+    console.log(`入力フィールド数: ${inputs.length}`);
+
+    // 期間フィールドを順番に探す
+    let foundStartField = false;
+    for (let i = 0; i < inputs.length; i++) {
+      const value = await inputs[i].inputValue();
+      const type = await inputs[i].getAttribute('type');
+
+      // 現在の値がYYYY-MMの形式の場合、期間フィールドと判断
+      if (value.match(/^\d{4}-\d{2}$/)) {
+        if (!foundStartField) {
+          console.log(`開始期間を入力中... (現在値: ${value})`);
+          await inputs[i].fill(startFormatted);
+          await this.page.waitForTimeout(500);
+          foundStartField = true;
+        } else {
+          console.log(`終了期間を入力中... (現在値: ${value})`);
+          await inputs[i].fill(endFormatted);
+          await this.page.waitForTimeout(500);
+          break;
+        }
+      }
+    }
+
+    // 検索ボタンをクリック
+    const searchButton = this.page.locator('button:has-text("検索"), input[type="submit"][value*="検索"], button:has-text("表示")');
+    if (await searchButton.count() > 0) {
+      console.log('🔍 検索ボタンをクリック中...');
+      await searchButton.first().click({ force: true });
+      await this.page.waitForTimeout(5000);
+    }
+
+    await this.page.screenshot({ path: 'screenshots/linkag-monthly-result.png', fullPage: true });
+    console.log('📸 月別レポート結果のスクリーンショット保存');
+  }
+
+  async extractMonthlyData(): Promise<MonthlyData[]> {
+    if (!this.page) {
+      throw new Error('Browser not initialized.');
+    }
+
+    console.log('📊 月別データ取得中...');
+
+    const data: MonthlyData[] = [];
+
     // テーブルを探す
     const tables = await this.page.locator('table').count();
     console.log(`\nテーブル数: ${tables}`);
@@ -139,7 +171,7 @@ export class LinkAGDailyScraper {
       return data;
     }
 
-    // 日別レポートのテーブルを取得（通常は最後のテーブル）
+    // 月別レポートのテーブルを取得
     const table = this.page.locator('table').last();
     const rows = await table.locator('tbody tr').count();
     console.log(`テーブル行数: ${rows}\n`);
@@ -150,26 +182,25 @@ export class LinkAGDailyScraper {
       const cells = await row.locator('td').allTextContents();
 
       if (cells.length >= 7) {
-        // Link-AGのテーブル構造:
-        // 0: 日付, 1: imp, 2: クリック数, 3: CTR, 4: 発生数, 5: CVR, 6: 発生額金額(税抜), 7: 成果数, 8: 成果期待金額(税抜), 9: EPC
-        const dateText = cells[0]?.trim(); // 日付 (2025/10/01形式)
+        // 月別テーブルの構造（推定）
+        // 0: 年月, 1: imp, 2: クリック数, 3: CTR, 4: 発生数, 5: CVR, 6: 発生額金額, 7: 成果数, 8: 成果期待金額, 9: EPC
+        const yearMonthText = cells[0]?.trim(); // 年月 (2025/01形式)
         const confirmedRevenue = cells[8]?.trim() || '0'; // 成果期待金額(税抜)
 
-        // 日付フォーマット: 2025/10/01 → 2025-10-01
-        const dateMatch = dateText.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+        // 年月フォーマット: 2025/01 → 2025-01
+        const yearMonthMatch = yearMonthText.match(/(\d{4})\/(\d{1,2})/);
 
-        if (dateMatch) {
-          const year = dateMatch[1];
-          const month = dateMatch[2].padStart(2, '0');
-          const day = dateMatch[3].padStart(2, '0');
-          const formattedDate = `${year}-${month}-${day}`;
+        if (yearMonthMatch) {
+          const year = yearMonthMatch[1];
+          const month = yearMonthMatch[2].padStart(2, '0');
+          const formattedYearMonth = `${year}-${month}`;
 
           const revenue = confirmedRevenue.replace(/[,]/g, '');
 
-          console.log(`${formattedDate}: ${confirmedRevenue}円`);
+          console.log(`${formattedYearMonth}: ${confirmedRevenue}円`);
 
           data.push({
-            date: formattedDate,
+            yearMonth: formattedYearMonth,
             confirmedRevenue: revenue,
           });
         }
@@ -180,7 +211,7 @@ export class LinkAGDailyScraper {
     return data;
   }
 
-  async saveToSupabase(data: DailyData[]) {
+  async saveToSupabase(data: MonthlyData[]) {
     const { createClient } = await import('@supabase/supabase-js');
 
     const supabase = createClient(
@@ -188,7 +219,7 @@ export class LinkAGDailyScraper {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    console.log('\n💾 Supabase (daily_actualsテーブル) に保存中...\n');
+    console.log('\n💾 Supabase (actualsテーブル) に保存中...\n');
 
     let successCount = 0;
     let errorCount = 0;
@@ -197,14 +228,17 @@ export class LinkAGDailyScraper {
       const amount = parseInt(item.confirmedRevenue, 10);
 
       if (isNaN(amount)) {
-        console.log(`⚠️  スキップ: ${item.date} - 無効な金額`);
+        console.log(`⚠️  スキップ: ${item.yearMonth} - 無効な金額`);
         errorCount++;
         continue;
       }
 
-      const { error } = await supabase.from('daily_actuals').upsert(
+      // 月の最初の日をdateとして使用
+      const date = `${item.yearMonth}-01`;
+
+      const { error } = await supabase.from('actuals').upsert(
         {
-          date: item.date,
+          date,
           amount,
           media_id: this.config.mediaId,
           account_item_id: this.config.accountItemId,
@@ -216,7 +250,7 @@ export class LinkAGDailyScraper {
       );
 
       if (error) {
-        console.error(`❌ エラー (${item.date}):`, error.message);
+        console.error(`❌ エラー (${item.yearMonth}):`, error.message);
         errorCount++;
       } else {
         successCount++;
@@ -237,7 +271,7 @@ export class LinkAGDailyScraper {
 
 // メイン処理
 async function main() {
-  console.log('\n📋 Link-AG 日別レポート取得');
+  console.log('\n📋 Link-AG 月別レポート取得');
 
   const credentials: LinkAGCredentials = {
     username: 'rere-dev',
@@ -245,7 +279,9 @@ async function main() {
   };
 
   const config: ScraperConfig = {
-    headless: true,
+    headless: false, // デバッグ用にfalse
+    startYearMonth: '202501',
+    endYearMonth: '202510',
     mediaId: '4d3d6a03-3cf2-41b9-a23c-4b2d75bafa12', // ReRe
     accountItemId: 'a6df5fab-2df4-4263-a888-ab63348cccd5', // アフィリエイト
     aspId: '88256cb4-d177-47d3-bf04-db48bf859843', // Link-AG
@@ -253,19 +289,17 @@ async function main() {
 
   console.log(`📱 メディアID: ${config.mediaId}`);
   console.log(`💰 勘定科目ID: ${config.accountItemId}`);
-  console.log(`🔗 ASP ID: ${config.aspId}\n`);
+  console.log(`🔗 ASP ID: ${config.aspId}`);
+  console.log(`📅 期間: ${config.startYearMonth} ～ ${config.endYearMonth}\n`);
 
-  const scraper = new LinkAGDailyScraper(credentials, config);
+  const scraper = new LinkAGMonthlyScraper(credentials, config);
 
   try {
     await scraper.initialize();
     await scraper.login();
 
-    // ログイン後、URLを確認
-    console.log('現在のURL:', await scraper['page']?.url());
-
-    // ダッシュボードに日別レポートが表示されているので、データを抽出
-    const data = await scraper.extractDailyData();
+    await scraper.navigateToMonthlyReport();
+    const data = await scraper.extractMonthlyData();
 
     if (data.length > 0) {
       await scraper.saveToSupabase(data);

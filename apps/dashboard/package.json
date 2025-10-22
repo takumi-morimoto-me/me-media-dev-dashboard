@@ -13,6 +13,8 @@
     "scrape:moshimo:daily": "tsx src/scripts/moshimo-daily-scraper.ts",
     "scrape:moshimo:daily:all": "tsx src/scripts/moshimo-scrape-all-months.ts",
     "scrape:linkag:daily": "tsx src/scripts/linkag-daily-scraper.ts",
+    "scrape:linkag:daily:all": "tsx src/scripts/linkag-scrape-all-months.ts",
+    "scrape:linkag:monthly": "tsx src/scripts/linkag-monthly-scraper.ts",
     "db:check": "tsx src/scripts/check-db-data.ts",
     "db:check-actuals": "tsx src/scripts/check-daily-actuals.ts",
     "db:check-moshimo": "tsx src/scripts/check-moshimo-actuals.ts",
