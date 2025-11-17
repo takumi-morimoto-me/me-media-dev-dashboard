@@ -27,7 +27,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Trash2, Plus, PlusCircle, ChevronDown, Upload } from "lucide-react";
+import { Trash2, Plus, PlusCircle, ChevronDown } from "lucide-react";
 import { createAsp, updateAsp, deleteAsp, bulkDeleteAsps, updateAspMedias } from "@/actions/asp-actions";
 import React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -87,7 +87,6 @@ export function AgentClient() {
   const [editingValues, setEditingValues] = useState<{ [key: string]: string }>({});
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [editingMedias, setEditingMedias] = useState<{ aspId: string; mediaIds: string[] } | null>(null);
-  const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
 
   // ASPが動作しているかチェック
   const isWorking = (aspName: string): boolean => {
@@ -400,10 +399,7 @@ export function AgentClient() {
       <div className="flex-1 space-y-4 pr-6 -ml-2">
         {/* Header with Import Button */}
         <div className="flex justify-end">
-          <Button onClick={() => setIsCsvImportOpen(true)} variant="outline">
-            <Upload className="h-4 w-4 mr-2" />
-            CSV一括登録
-          </Button>
+          <CsvImportClient />
         </div>
 
         <div className="rounded-lg overflow-visible">
@@ -467,14 +463,18 @@ export function AgentClient() {
                       ) : (
                         <div className="flex items-center justify-between group/name-cell">
                           <div className="flex items-center gap-2 flex-1">
-                            <span onClick={() => startEditing(asp.id, "name", asp.name)} className="cursor-pointer">
-                              {asp.name}
-                            </span>
-                            {isWorking(asp.name) && (
+                            {isWorking(asp.name) ? (
                               <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-xs">
                                 動作中
                               </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-xs">
+                                未動作
+                              </Badge>
                             )}
+                            <span onClick={() => startEditing(asp.id, "name", asp.name)} className="cursor-pointer">
+                              {asp.name}
+                            </span>
                           </div>
                           <Button
                             size="sm"
@@ -730,9 +730,6 @@ export function AgentClient() {
           )}
         </SheetContent>
       </Sheet>
-
-      {/* CSV Import Modal */}
-      <CsvImportClient open={isCsvImportOpen} onOpenChange={setIsCsvImportOpen} />
     </div>
   );
 }

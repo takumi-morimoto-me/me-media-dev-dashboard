@@ -3,7 +3,7 @@
 import { useState, useRef, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { Upload, Download, FileText, AlertCircle, CheckCircle2, Info } from "lucide-react";
 import { bulkImportAspsFromCsv, exportAspsAsCsv, type CsvImportRow, type CsvImportResult } from "@/actions/asp-actions";
@@ -11,14 +11,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 
 interface CsvImportClientProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  trigger?: React.ReactNode;
 }
 
-export function CsvImportClient({ open, onOpenChange }: CsvImportClientProps) {
+export function CsvImportClient({ trigger }: CsvImportClientProps) {
   const [isPending, startTransition] = useTransition();
   const [isDragging, setIsDragging] = useState(false);
   const [importResult, setImportResult] = useState<CsvImportResult | null>(null);
+  const [open, setOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // CSVファイルをパースする関数
@@ -181,16 +181,25 @@ export function CsvImportClient({ open, onOpenChange }: CsvImportClientProps) {
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>ASP一括登録</SheetTitle>
-          <SheetDescription>
-            CSVファイルからASPを一括で登録・更新できます
-          </SheetDescription>
-        </SheetHeader>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        {trigger || (
+          <Button variant="outline">
+            <Upload className="h-4 w-4 mr-2" />
+            CSV一括登録
+          </Button>
+        )}
+      </PopoverTrigger>
+      <PopoverContent className="w-[600px] max-h-[80vh] overflow-y-auto" align="end">
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <h3 className="font-semibold text-base">ASP一括登録</h3>
+            <p className="text-sm text-muted-foreground">
+              CSVファイルからASPを一括で登録・更新できます
+            </p>
+          </div>
 
-        <div className="space-y-6 py-4">
+          <div className="space-y-4">
           {/* アクションボタン */}
           <div className="flex gap-3">
             <Button onClick={handleDownloadTemplate} variant="outline" size="sm">
@@ -344,8 +353,9 @@ export function CsvImportClient({ open, onOpenChange }: CsvImportClientProps) {
               </CardContent>
             </Card>
           )}
+          </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </PopoverContent>
+    </Popover>
   );
 }
