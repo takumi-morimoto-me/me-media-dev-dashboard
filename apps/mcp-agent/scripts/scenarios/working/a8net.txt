@@ -1,0 +1,16 @@
+1. A8.netのログインページ (https://www.a8.net/) にアクセス
+2. 待機 (2000ms)
+3. input[name="login"] に {SECRET:A8NET_USERNAME} を入力
+4. input[name="passwd"] に {SECRET:A8NET_PASSWORD} を入力
+5. 待機 (1000ms)
+6. input[name="login_as_btn"] をクリック
+7. 待機 (3000ms)
+8. text=レポート をクリック
+9. 待機 (2000ms)
+10. text=成果報酬 をクリック
+11. 待機 (3000ms)
+12. text=日別 をクリック
+13. 待機 (3000ms)
+14. テーブルから日別の確定報酬データを抽出して daily_actuals テーブルに保存
+    - 日付は列0（2025/11/10形式）を2025-11-10に変換
+    - 確定報酬金額は列5

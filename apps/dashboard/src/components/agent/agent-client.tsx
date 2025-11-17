@@ -27,12 +27,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Trash2, Plus, PlusCircle, ChevronDown } from "lucide-react";
+import { Trash2, Plus, PlusCircle, ChevronDown, Upload } from "lucide-react";
 import { createAsp, updateAsp, deleteAsp, bulkDeleteAsps, updateAspMedias } from "@/actions/asp-actions";
 import React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useAgentContext } from "@/components/layout/dashboard-client-layout";
+import { CsvImportClient } from "@/components/agent/csv-import-client";
 
 // aspsテーブルの型
 type Asp = {
@@ -62,6 +63,20 @@ type EditingAsp = {
   displayIndex: number;
 };
 
+// 動作確認済みASP一覧（データ取得可能）
+const WORKING_ASPS = new Set([
+  'a8app',
+  'a8net',
+  'accesstrade',
+  'afb',
+  'castalk',
+  'imobile',
+  'ultiga',
+  'valuecommerce',
+  'linkag',
+  'moshimo'
+]);
+
 export function AgentClient() {
   const { asps, media, credentials, selectedMediaId } = useAgentContext();
   const [editingRows, setEditingRows] = useState<EditingAsp[]>([]);
@@ -72,6 +87,12 @@ export function AgentClient() {
   const [editingValues, setEditingValues] = useState<{ [key: string]: string }>({});
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [editingMedias, setEditingMedias] = useState<{ aspId: string; mediaIds: string[] } | null>(null);
+  const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
+
+  // ASPが動作しているかチェック
+  const isWorking = (aspName: string): boolean => {
+    return WORKING_ASPS.has(aspName.toLowerCase().replace(/[^a-z0-9]/g, ''));
+  };
 
   // フィルタリングされたASPリスト（credentialsベース）
   const filteredAsps = selectedMediaId === null
@@ -191,7 +212,7 @@ export function AgentClient() {
   // 選択された行を一括削除
   const handleBulkDelete = async () => {
     if (selectedRows.size === 0) return;
-    if (!confirm(`${selectedRows.size}件のASPを削除しますか？`)) return;
+    if (!confirm(`${selectedRows.size}件のサービスを削除しますか？`)) return;
 
     const aspIds = Array.from(selectedRows);
 
@@ -223,7 +244,7 @@ export function AgentClient() {
   // 基本情報を保存（ASP名、URL、メディア）
   const handleSaveBasicInfo = (row: EditingAsp) => {
     if (!row.name || !row.login_url || row.media_ids.length === 0) {
-      toast.error("ASP名、ログインURL、メディアを入力してください");
+      toast.error("サービス名、ログインURL、メディアを入力してください");
       return;
     }
 
@@ -242,7 +263,7 @@ export function AgentClient() {
       if (result.error) {
         toast.error(result.error);
       } else {
-        toast.success("ASPを作成しました。");
+        toast.success("サービスを作成しました。");
         setEditingRows(editingRows.filter((r) => r.id !== row.id));
       }
     });
@@ -286,7 +307,7 @@ export function AgentClient() {
       <TableCell></TableCell>
       <TableCell className="sticky left-0 z-10 bg-muted/30">
         <Input
-          placeholder="ASP名を入力"
+          placeholder="サービス名を入力"
           value={row.name}
           onChange={(e) => handleUpdateRow(row.id, "name", e.target.value)}
           className="h-8"
@@ -377,6 +398,14 @@ export function AgentClient() {
     <div className="flex gap-4 h-full">
       {/* Table Area */}
       <div className="flex-1 space-y-4 pr-6 -ml-2">
+        {/* Header with Import Button */}
+        <div className="flex justify-end">
+          <Button onClick={() => setIsCsvImportOpen(true)} variant="outline">
+            <Upload className="h-4 w-4 mr-2" />
+            CSV一括登録
+          </Button>
+        </div>
+
         <div className="rounded-lg overflow-visible">
         <div className="overflow-x-auto" style={{ overflowY: 'visible' }}>
           <Table className="overflow-visible">
@@ -389,7 +418,7 @@ export function AgentClient() {
                     onCheckedChange={toggleAllSelection}
                   />
                 </TableHead>
-                <TableHead className="sticky left-0 z-10 bg-muted min-w-[200px]">ASP名</TableHead>
+                <TableHead className="sticky left-0 z-10 bg-muted min-w-[200px]">サービス名</TableHead>
                 <TableHead className="min-w-[120px]">メディア</TableHead>
                 <TableHead className="min-w-[250px]">ログインURL</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
@@ -437,9 +466,16 @@ export function AgentClient() {
                         />
                       ) : (
                         <div className="flex items-center justify-between group/name-cell">
-                          <span onClick={() => startEditing(asp.id, "name", asp.name)} className="cursor-pointer flex-1">
-                            {asp.name}
-                          </span>
+                          <div className="flex items-center gap-2 flex-1">
+                            <span onClick={() => startEditing(asp.id, "name", asp.name)} className="cursor-pointer">
+                              {asp.name}
+                            </span>
+                            {isWorking(asp.name) && (
+                              <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-xs">
+                                動作中
+                              </Badge>
+                            )}
+                          </div>
                           <Button
                             size="sm"
                             variant="ghost"
@@ -597,7 +633,7 @@ export function AgentClient() {
                   <TableCell colSpan={6}>
                     <Button onClick={() => handleInsertRow(filteredAsps.length)} size="sm" variant="ghost" className="w-full justify-start">
                       <Plus className="h-4 w-4 mr-2" />
-                      新規ASPを追加
+                      新規サービスを追加
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -615,7 +651,7 @@ export function AgentClient() {
             <>
               <SheetHeader>
                 <SheetTitle className="text-2xl">{selectedAsp.name}</SheetTitle>
-                <SheetDescription>ASPの詳細情報</SheetDescription>
+                <SheetDescription>サービスの詳細情報</SheetDescription>
               </SheetHeader>
 
               <div className="space-y-6 p-6">
@@ -694,6 +730,9 @@ export function AgentClient() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* CSV Import Modal */}
+      <CsvImportClient open={isCsvImportOpen} onOpenChange={setIsCsvImportOpen} />
     </div>
   );
 }

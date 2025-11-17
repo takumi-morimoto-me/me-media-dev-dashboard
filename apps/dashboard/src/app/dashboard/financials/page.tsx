@@ -72,7 +72,7 @@ export default async function FinancialsPage({ searchParams }: FinancialsPagePro
 
   // Default to 6 if not set, but log the error
   const fiscalYearStartMonth = setting?.value ? parseInt(setting.value) : 6;
-  if (settingError) {
+  if (settingError && Object.keys(settingError).length > 0) {
     console.error("Error fetching fiscal year start month setting:", settingError);
   }
 

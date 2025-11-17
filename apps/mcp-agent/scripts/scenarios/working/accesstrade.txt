@@ -1,0 +1,14 @@
+1. アクセストレードのログインページ (https://member.accesstrade.net/) にアクセス
+2. 待機 (2000ms)
+3. 2番目のinput[name="userId"] に {SECRET:ACCESSTRADE_USERNAME} を入力
+4. 2番目のinput[name="userPass"] に {SECRET:ACCESSTRADE_PASSWORD} を入力
+5. 待機 (1000ms)
+6. 2番目のsubmitボタンをクリック
+7. 待機 (5000ms)
+8. text=レポート をクリック
+9. 待機 (3000ms)
+10. text=日別 をクリック
+11. 待機 (3000ms)
+12. 表示ボタンをクリック
+13. 待機 (5000ms)
+14. テーブルから日別の確定報酬データを抽出して daily_actuals テーブルに保存

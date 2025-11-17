@@ -1,0 +1,10 @@
+1. バリューコマースのログインページ (https://www.valuecommerce.ne.jp/) にアクセス
+2. 待機 (2000ms)
+3. input[type="text"], input[name="login_id"] に {SECRET:VALUECOMMERCE_USERNAME} を入力
+4. input[type="password"] に {SECRET:VALUECOMMERCE_PASSWORD} を入力
+5. 待機 (1000ms)
+6. button[type="submit"], input[type="submit"] をクリック
+7. 待機 (5000ms)
+8. レポートページに移動
+9. 待機 (3000ms)
+10. テーブルから日別の確定報酬データを抽出して daily_actuals テーブルに保存
