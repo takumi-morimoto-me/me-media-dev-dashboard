@@ -471,7 +471,9 @@ export async function exportAspsAsCsv(): Promise<{ data?: string; error?: string
       if (aspCredentials.length > 0) {
         // 認証情報がある場合、各メディアごとに行を出力
         for (const cred of aspCredentials) {
-          const mediaName = (cred.media as any)?.name || "";
+          const mediaName = (cred.media && typeof cred.media === 'object' && 'name' in cred.media)
+            ? cred.media.name
+            : "";
           const username = (cred.username_secret_key || "").replace(/,/g, "，");
           const password = (cred.password_secret_key || "").replace(/,/g, "，");
 
