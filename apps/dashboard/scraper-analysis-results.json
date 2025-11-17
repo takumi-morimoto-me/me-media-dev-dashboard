@@ -1,0 +1,402 @@
+[
+  {
+    "name": "a8app",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 287,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "a8net",
+    "hasLogin": true,
+    "hasScrapeData": false,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 269,
+    "completeness": "skeleton",
+    "notes": [
+      "ログイン実装あり",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "accesstrade",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 785,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "afb",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 703,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "amazon",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 694,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "daily_actualsテーブルに保存",
+      "手動操作が必要"
+    ]
+  },
+  {
+    "name": "castalk",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 295,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "circuitx",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 333,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "daily_actualsテーブルに保存",
+      "手動操作が必要"
+    ]
+  },
+  {
+    "name": "dmm",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 933,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "docomo-affiliate",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 393,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "felmat",
+    "hasLogin": true,
+    "hasScrapeData": false,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 499,
+    "completeness": "skeleton",
+    "notes": [
+      "ログイン実装あり",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "imobile",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 413,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "janet",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 556,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "linkag",
+    "hasLogin": true,
+    "hasScrapeData": false,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 470,
+    "completeness": "skeleton",
+    "notes": [
+      "ログイン実装あり",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "linkshare",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 976,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "moshimo",
+    "hasLogin": true,
+    "hasScrapeData": false,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 415,
+    "completeness": "skeleton",
+    "notes": [
+      "ログイン実装あり",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "presco",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 293,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "ratelad",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 260,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "rentracks",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 398,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "skyflag",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 286,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "slvrbullet",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 260,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "smaad",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 286,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "smartc",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 530,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "tg-affiliate",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 460,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "ultiga",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 351,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "valuecommerce",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": true,
+    "hasCredentials": true,
+    "lineCount": 817,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "CSVダウンロード機能あり",
+      "daily_actualsテーブルに保存"
+    ]
+  },
+  {
+    "name": "webridge",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 443,
+    "completeness": "partial",
+    "notes": [
+      "ログイン実装あり",
+      "daily_actualsテーブルに保存",
+      "未実装部分あり",
+      "手動操作が必要"
+    ]
+  },
+  {
+    "name": "zucks",
+    "hasLogin": true,
+    "hasScrapeData": true,
+    "hasSaveToDatabase": true,
+    "hasCSVDownload": false,
+    "hasCredentials": true,
+    "lineCount": 426,
+    "completeness": "complete",
+    "notes": [
+      "ログイン実装あり",
+      "DOM解析でデータ取得",
+      "daily_actualsテーブルに保存"
+    ]
+  }
+]

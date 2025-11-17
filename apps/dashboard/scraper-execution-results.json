@@ -1,0 +1,134 @@
+[
+  {
+    "name": "a8app",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 33825
+  },
+  {
+    "name": "accesstrade",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 107593
+  },
+  {
+    "name": "afb",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 31463
+  },
+  {
+    "name": "amazon",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 40531
+  },
+  {
+    "name": "castalk",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 24619
+  },
+  {
+    "name": "circuitx",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 11227
+  },
+  {
+    "name": "dmm",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 80919
+  },
+  {
+    "name": "docomo-affiliate",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 12645
+  },
+  {
+    "name": "imobile",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 31179
+  },
+  {
+    "name": "janet",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 24928
+  },
+  {
+    "name": "linkshare",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 49819
+  },
+  {
+    "name": "presco",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 21565
+  },
+  {
+    "name": "ratelad",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 9866
+  },
+  {
+    "name": "rentracks",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 13166
+  },
+  {
+    "name": "skyflag",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 10209
+  },
+  {
+    "name": "slvrbullet",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 62721
+  },
+  {
+    "name": "smaad",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 40173
+  },
+  {
+    "name": "smartc",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 31806
+  },
+  {
+    "name": "tg-affiliate",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 62925
+  },
+  {
+    "name": "ultiga",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 54649
+  },
+  {
+    "name": "valuecommerce",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 95203
+  },
+  {
+    "name": "zucks",
+    "status": "success",
+    "message": "実行成功",
+    "duration": 20820
+  }
+]

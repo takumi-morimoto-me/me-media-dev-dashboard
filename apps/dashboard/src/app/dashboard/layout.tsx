@@ -31,7 +31,7 @@ export default async function DashboardLayout({
 
   return (
     <DashboardClientLayout mediaData={mediaData} aspsData={aspsData} credentialsData={credentialsData}>
-      <div className="h-screen flex bg-background relative">
+      <div className="h-screen flex bg-background relative" suppressHydrationWarning>
         {/* 1st Column: Global Sidebar - Absolute positioned */}
         <AppSidebar />
 
