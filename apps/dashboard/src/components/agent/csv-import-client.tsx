@@ -3,7 +3,7 @@
 import { useState, useRef, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { Upload, Download, FileText, AlertCircle, CheckCircle2, Info } from "lucide-react";
 import { bulkImportAspsFromCsv, exportAspsAsCsv, type CsvImportRow, type CsvImportResult } from "@/actions/asp-actions";
@@ -181,14 +181,14 @@ export function CsvImportClient({ open, onOpenChange }: CsvImportClientProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>ASP一括登録</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>ASP一括登録</SheetTitle>
+          <SheetDescription>
             CSVファイルからASPを一括で登録・更新できます
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <div className="space-y-6 py-4">
           {/* アクションボタン */}
@@ -345,7 +345,7 @@ export function CsvImportClient({ open, onOpenChange }: CsvImportClientProps) {
             </Card>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
