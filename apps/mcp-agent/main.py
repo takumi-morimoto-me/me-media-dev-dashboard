@@ -3,7 +3,7 @@
 import logging
 import sys
 from config import Settings
-from agent import SupabaseClient, BrowserController, GeminiClient, AgentLoop
+from core import SupabaseClient, BrowserController, GeminiClient, AgentLoop
 
 
 # Configure logging

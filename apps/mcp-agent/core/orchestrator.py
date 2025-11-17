@@ -1,11 +1,11 @@
-"""Main agent loop for autonomous ASP data collection."""
+"""Main orchestrator for autonomous ASP data collection."""
 
 import logging
 import re
 from typing import Optional, List, Dict, Any
-from .supabase_client import SupabaseClient
+from .database import SupabaseClient
 from .browser import BrowserController
-from .gemini_client import GeminiClient
+from .ai_client import GeminiClient
 
 logger = logging.getLogger(__name__)
 
