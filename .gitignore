@@ -66,3 +66,10 @@ __pycache__/
 screenshots/
 *-error.png
 after-login.png
+*.png
+
+# Credentials (should be stored in Supabase)
+*credentials*.csv
+asp-credentials.csv
+reference/
+screenshots/
