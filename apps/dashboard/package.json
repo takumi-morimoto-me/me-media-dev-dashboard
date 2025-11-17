@@ -6,24 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint",
-    "scrape:all:daily": "tsx src/scripts/run-all-daily-scrapers.ts",
-    "scrape:all:monthly": "tsx src/scripts/run-all-monthly-scrapers.ts",
-    "scrape:a8net:daily": "tsx src/scripts/a8net-daily-scraper.ts",
-    "scrape:a8net:daily:all": "tsx src/scripts/scrape-all-months.ts",
-    "scrape:a8net:monthly": "tsx src/scripts/a8net-monthly-scraper.ts",
-    "scrape:moshimo:daily": "tsx src/scripts/moshimo-daily-scraper.ts",
-    "scrape:moshimo:daily:all": "tsx src/scripts/moshimo-scrape-all-months.ts",
-    "scrape:linkag:daily": "tsx src/scripts/linkag-daily-scraper.ts",
-    "scrape:linkag:daily:all": "tsx src/scripts/linkag-scrape-all-months.ts",
-    "scrape:linkag:monthly": "tsx src/scripts/linkag-monthly-scraper.ts",
-    "scrape:felmat:daily": "tsx src/scripts/felmat-daily-scraper.ts",
-    "scrape:felmat:daily:all": "tsx src/scripts/felmat-scrape-all-months.ts",
-    "db:check": "tsx src/scripts/check-db-data.ts",
-    "db:check-actuals": "tsx src/scripts/check-daily-actuals.ts",
-    "db:check-moshimo": "tsx src/scripts/check-moshimo-actuals.ts",
-    "db:check-linkag": "tsx src/scripts/check-linkag-asp.ts",
-    "db:check-tables": "tsx src/scripts/check-tables.ts"
+    "lint": "eslint"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -47,11 +30,9 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "iconv-lite": "^0.7.0",
     "lucide-react": "^0.544.0",
     "next": "15.5.4",
     "next-themes": "^0.4.6",
-    "pg": "^8.16.3",
     "react": "19.1.0",
     "react-day-picker": "^9.11.0",
     "react-dom": "19.1.0",
@@ -62,14 +43,10 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@playwright/test": "^1.56.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "dotenv": "^17.2.3",
     "eslint-config-next": "15.5.4",
-    "playwright": "^1.56.1",
-    "tailwindcss": "^4",
-    "tsx": "^4.20.6"
+    "tailwindcss": "^4"
   }
 }
