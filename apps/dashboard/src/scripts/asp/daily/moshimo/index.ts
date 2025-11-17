@@ -212,7 +212,93 @@ export class MoshimoDailyScraper {
     return data;
   }
 
-  async saveToSupabase(data: DailyData[]) {
+  async navigateToMonthlyReport() {
+    if (!this.page) {
+      throw new Error('Browser not initialized.');
+    }
+
+    console.log('📊 売上レポートページに移動中...');
+
+    // 売上レポートページに移動
+    await this.page.goto('https://af.moshimo.com/af/shop/report/kpi/site', {
+      waitUntil: 'domcontentloaded',
+    });
+    await this.page.waitForTimeout(5000);
+
+    // 「月次」タブをクリック
+    console.log('📅 月次タブをクリック中...');
+    const monthlyTab = this.page.locator('a:has-text("月次"), button:has-text("月次")');
+    if (await monthlyTab.count() > 0) {
+      await monthlyTab.first().click();
+      await this.page.waitForTimeout(5000);
+      console.log('✅ 月次タブをクリックしました');
+    } else {
+      console.log('⚠️  月次タブが見つかりません');
+    }
+
+    // スクリーンショットを保存
+    await this.page.screenshot({ path: 'moshimo-monthly-report.png', fullPage: true });
+    console.log('📸 スクリーンショット保存: moshimo-monthly-report.png');
+    console.log('✅ 月別レポートページに到達');
+  }
+
+  async scrapeMonthlyData(): Promise<DailyData[]> {
+    if (!this.page) {
+      throw new Error('Browser not initialized.');
+    }
+
+    console.log('📊 月別データ取得中...');
+
+    const data: DailyData[] = [];
+
+    // テーブルを探す
+    const tables = await this.page.locator('table').count();
+    console.log(`\nテーブル数: ${tables}`);
+
+    if (tables === 0) {
+      console.log('⚠️  テーブルが見つかりません');
+      return data;
+    }
+
+    // 最初のテーブルを取得
+    const table = this.page.locator('table').first();
+    const rows = await table.locator('tbody tr').count();
+    console.log(`テーブル行数: ${rows}\n`);
+
+    // 各行からデータを抽出
+    for (let i = 0; i < rows; i++) {
+      const row = table.locator('tbody tr').nth(i);
+      const cells = await row.locator('td').allTextContents();
+
+      if (cells.length >= 2) {
+        const dateText = cells[0]?.trim();
+        const revenueText = cells[cells.length - 1]?.trim() || '0円';
+
+        // 日付フォーマット: 「2025年10月」→「2025/10」
+        const dateMatch = dateText.match(/(\d{4})年(\d{1,2})月/);
+
+        if (dateMatch) {
+          const year = dateMatch[1];
+          const month = dateMatch[2].padStart(2, '0');
+          const formattedDate = `${year}/${month}`;
+
+          const revenue = revenueText.replace(/[,円]/g, '');
+
+          console.log(`${formattedDate}: ${revenueText}`);
+
+          data.push({
+            date: formattedDate,
+            confirmedRevenue: revenue,
+          });
+        }
+      }
+    }
+
+    console.log(`\n✅ ${data.length}件のデータを取得しました`);
+    return data;
+  }
+
+  async saveToSupabase(data: DailyData[], tableName: 'daily_actuals' | 'actuals' = 'daily_actuals') {
     const { createClient } = await import('@supabase/supabase-js');
 
     const supabase = createClient(
@@ -220,7 +306,7 @@ export class MoshimoDailyScraper {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    console.log('\n💾 Supabase (daily_actualsテーブル) に保存中...\n');
+    console.log(`\n💾 Supabase (${tableName}テーブル) に保存中...\n`);
 
     let successCount = 0;
     let errorCount = 0;
@@ -234,7 +320,7 @@ export class MoshimoDailyScraper {
         continue;
       }
 
-      const { error } = await supabase.from('daily_actuals').upsert(
+      const { error } = await supabase.from(tableName).upsert(
         {
           date: item.date,
           amount,
@@ -292,12 +378,31 @@ async function main() {
   try {
     await scraper.initialize();
     await scraper.login();
+
+    // 日別レポートを取得
     await scraper.navigateToDailyReport();
+    const dailyData = await scraper.extractDailyData();
 
-    const data = await scraper.extractDailyData();
+    if (dailyData.length > 0) {
+      await scraper.saveToSupabase(dailyData, 'daily_actuals');
+    }
 
-    if (data.length > 0) {
-      await scraper.saveToSupabase(data);
+    // 月別レポートを取得
+    await scraper.navigateToMonthlyReport();
+    const monthlyData = await scraper.scrapeMonthlyData();
+
+    if (monthlyData.length > 0) {
+      // 月次データは YYYY/MM → YYYY-MM-末日 に変換
+      const monthlyDataForDb = monthlyData.map(item => {
+        const [year, month] = item.date.split('/');
+        const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+        return {
+          date: `${year}-${month.padStart(2, '0')}-${lastDay}`,
+          confirmedRevenue: item.confirmedRevenue
+        };
+      });
+
+      await scraper.saveToSupabase(monthlyDataForDb, 'actuals');
     }
   } catch (error) {
     console.error('❌ エラーが発生しました:', error);

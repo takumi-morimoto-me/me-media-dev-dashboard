@@ -15,7 +15,8 @@ interface DailyData {
 
 interface ScraperConfig {
   headless?: boolean;
-  month?: string;
+  startYearMonth?: string; // YYYYMM format (e.g., "202501")
+  endYearMonth?: string; // YYYYMM format (e.g., "202502")
   mediaId: string;
   accountItemId: string;
   aspId: string;
@@ -120,6 +121,183 @@ export class LinkAGDailyScraper {
     console.log('✅ ログイン処理完了');
   }
 
+  async navigateToDailyReport() {
+    if (!this.page) {
+      throw new Error('Browser not initialized.');
+    }
+
+    console.log('📊 日別レポートページに移動中...');
+
+    // 日別レポートページに直接移動
+    await this.page.goto('https://link-ag.net/partner/summaries/dates', {
+      waitUntil: 'domcontentloaded',
+    });
+    await this.page.waitForTimeout(3000);
+
+    await this.page.screenshot({ path: 'screenshots/linkag-daily-page.png', fullPage: true });
+    console.log('📸 日別レポートページのスクリーンショット保存');
+
+    // 期間選択がある場合
+    if (this.config.startYearMonth && this.config.endYearMonth) {
+      console.log(`📅 期間選択: ${this.config.startYearMonth} ～ ${this.config.endYearMonth}`);
+
+      // YYYYMM形式をYYYY-MM-DDに変換（開始日は1日、終了日は末日）
+      const formatStartDate = (yyyymm: string) => {
+        const year = yyyymm.substring(0, 4);
+        const month = yyyymm.substring(4, 6);
+        return `${year}-${month}-01`;
+      };
+
+      const formatEndDate = (yyyymm: string) => {
+        const year = parseInt(yyyymm.substring(0, 4));
+        const month = parseInt(yyyymm.substring(4, 6));
+        // 次の月の0日 = 今月の末日
+        const lastDay = new Date(year, month, 0).getDate();
+        return `${year}-${month.toString().padStart(2, '0')}-${lastDay}`;
+      };
+
+      const startFormatted = formatStartDate(this.config.startYearMonth);
+      const endFormatted = formatEndDate(this.config.endYearMonth);
+
+      console.log(`📅 日付範囲: ${startFormatted} ～ ${endFormatted}`);
+
+      // 期間選択の入力フィールドを探す（日付形式: YYYY-MM-DD）
+      const inputs = await this.page.locator('input[type="text"], input[type="date"], input:not([type="hidden"]):not([type="submit"]):not([type="button"])').all();
+
+      console.log(`入力フィールド数: ${inputs.length}`);
+
+      // 期間フィールドを順番に探す
+      let foundStartField = false;
+      for (let i = 0; i < inputs.length; i++) {
+        const value = await inputs[i].inputValue();
+
+        // 現在の値がYYYY-MM-DDの形式の場合、期間フィールドと判断
+        if (value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          // フィールドの詳細情報を取得
+          const fieldInfo = await inputs[i].evaluate((el) => {
+            const input = el as HTMLInputElement;
+            return {
+              type: input.type,
+              readOnly: input.readOnly,
+              disabled: input.disabled,
+              id: input.id,
+              name: input.name,
+              className: input.className,
+            };
+          });
+
+          console.log(`フィールド情報:`, fieldInfo);
+
+          if (!foundStartField) {
+            console.log(`開始日を入力中... (現在値: ${value} → 新しい値: ${startFormatted})`);
+
+            // フィールドが読み取り専用でない場合のみ入力
+            if (!fieldInfo.readOnly && !fieldInfo.disabled) {
+              // フィールドをクリックしてフォーカス
+              await inputs[i].click();
+              await this.page.waitForTimeout(500);
+
+              // すべての文字を選択して削除
+              await this.page.keyboard.press('Meta+A');
+              await this.page.waitForTimeout(200);
+              await this.page.keyboard.press('Backspace');
+              await this.page.waitForTimeout(500);
+
+              // 1文字ずつ入力
+              for (const char of startFormatted) {
+                await this.page.keyboard.type(char);
+                await this.page.waitForTimeout(50);
+              }
+              await this.page.waitForTimeout(500);
+
+              // 入力後の値を確認
+              const newValue = await inputs[i].inputValue();
+              console.log(`入力後の値: ${newValue}`);
+            } else {
+              console.log('⚠️  フィールドが読み取り専用または無効です');
+            }
+
+            foundStartField = true;
+          } else {
+            console.log(`終了日を入力中... (現在値: ${value} → 新しい値: ${endFormatted})`);
+
+            // フィールドが読み取り専用でない場合のみ入力
+            if (!fieldInfo.readOnly && !fieldInfo.disabled) {
+              // フィールドをクリックしてフォーカス
+              await inputs[i].click();
+              await this.page.waitForTimeout(500);
+
+              // すべての文字を選択して削除
+              await this.page.keyboard.press('Meta+A');
+              await this.page.waitForTimeout(200);
+              await this.page.keyboard.press('Backspace');
+              await this.page.waitForTimeout(500);
+
+              // 1文字ずつ入力
+              for (const char of endFormatted) {
+                await this.page.keyboard.type(char);
+                await this.page.waitForTimeout(50);
+              }
+              await this.page.waitForTimeout(500);
+
+              // 入力後の値を確認
+              const newValue = await inputs[i].inputValue();
+              console.log(`入力後の値: ${newValue}`);
+            } else {
+              console.log('⚠️  フィールドが読み取り専用または無効です');
+            }
+
+            break;
+          }
+        }
+      }
+
+      // 期間入力が完了するまで待機
+      await this.page.waitForTimeout(2000);
+
+      // 検索ボタンをクリック
+      console.log('🔍 検索ボタンを探しています...');
+
+      // input[type="submit"] も確認
+      const submitInputs = await this.page.locator('input[type="submit"]').all();
+      console.log(`\ninput[type="submit"]の数: ${submitInputs.length}`);
+
+      for (let i = 0; i < submitInputs.length; i++) {
+        const inputInfo = await submitInputs[i].evaluate((inp) => ({
+          value: (inp as HTMLInputElement).value,
+          className: inp.className,
+        }));
+        console.log(`input${i}: ${JSON.stringify(inputInfo)}`);
+      }
+
+      // 「検索」という値を持つinput[type="submit"]を探す
+      const searchButton = this.page.locator('input[type="submit"][value="検索"]').first();
+      const buttonCount = await searchButton.count();
+
+      console.log(`検索ボタンの数: ${buttonCount}\n`);
+
+      if (buttonCount > 0) {
+        console.log('🔍 検索ボタンをクリック中...');
+
+        // ナビゲーションを待機
+        const navigationPromise = this.page.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
+
+        await searchButton.click();
+
+        // ナビゲーション完了を待機
+        await navigationPromise;
+        await this.page.waitForTimeout(3000);
+
+        console.log('✅ 検索完了');
+      } else {
+        console.log('⚠️  検索ボタンが見つかりませんでした');
+      }
+
+      await this.page.screenshot({ path: 'screenshots/linkag-daily-report-result.png', fullPage: true });
+      console.log('📸 日別レポート結果のスクリーンショット保存');
+    }
+  }
+
   async extractDailyData(): Promise<DailyData[]> {
     if (!this.page) {
       throw new Error('Browser not initialized.');
@@ -151,9 +329,13 @@ export class LinkAGDailyScraper {
 
       if (cells.length >= 7) {
         // Link-AGのテーブル構造:
-        // 0: 日付, 1: imp, 2: クリック数, 3: CTR, 4: 発生数, 5: CVR, 6: 発生額金額(税抜), 7: 成果数, 8: 成果期待金額(税抜), 9: EPC
+        // 期間選択時（11列）: 0: 日付, 1: 曜日, 2: imp, 3: クリック数, 4: CTR, 5: 発生数, 6: CVR, 7: 発生報酬金額(税抜), 8: 承認数, 9: 確定報酬金額(税抜), 10: EPC
+        // 現在月のみ（10列）: 0: 日付, 1: imp, 2: クリック数, 3: CTR, 4: 発生数, 5: CVR, 6: 発生報酬金額(税抜), 7: 承認数, 8: 確定報酬金額(税抜), 9: EPC
         const dateText = cells[0]?.trim(); // 日付 (2025/10/01形式)
-        const confirmedRevenue = cells[8]?.trim() || '0'; // 成果期待金額(税抜)
+
+        // 確定報酬金額のインデックスを決定（曜日カラムの有無で判定）
+        const confirmedRevenueIndex = cells.length === 11 ? 9 : 8;
+        const confirmedRevenue = cells[confirmedRevenueIndex]?.trim() || '0'; // 確定報酬金額(税抜)
 
         // 日付フォーマット: 2025/10/01 → 2025-10-01
         const dateMatch = dateText.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
@@ -264,7 +446,12 @@ async function main() {
     // ログイン後、URLを確認
     console.log('現在のURL:', await scraper['page']?.url());
 
-    // ダッシュボードに日別レポートが表示されているので、データを抽出
+    // 期間指定がある場合は日別レポートページに移動
+    if (config.startYearMonth && config.endYearMonth) {
+      await scraper.navigateToDailyReport();
+    }
+
+    // データを抽出
     const data = await scraper.extractDailyData();
 
     if (data.length > 0) {
