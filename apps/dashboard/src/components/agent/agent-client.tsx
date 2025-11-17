@@ -14,14 +14,6 @@ import {
   TableRow,
   TableFooter,
 } from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import {
   Popover,
   PopoverContent,
@@ -82,7 +74,6 @@ export function AgentClient() {
   const [editingRows, setEditingRows] = useState<EditingAsp[]>([]);
   const [editingPrompts, setEditingPrompts] = useState<{ [key: string]: string }>({});
   const [isPending, startTransition] = useTransition();
-  const [selectedAsp, setSelectedAsp] = useState<Asp | null>(null);
   const [editingCell, setEditingCell] = useState<{ aspId: string; field: keyof Asp } | null>(null);
   const [editingValues, setEditingValues] = useState<{ [key: string]: string }>({});
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
@@ -476,14 +467,76 @@ export function AgentClient() {
                               {asp.name}
                             </span>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="opacity-0 group-hover/name-cell:opacity-100 transition-opacity h-6 px-2 ml-2"
-                            onClick={() => setSelectedAsp(asp)}
-                          >
-                            開く
-                          </Button>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="opacity-0 group-hover/name-cell:opacity-100 transition-opacity h-6 px-2 ml-2"
+                              >
+                                開く
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[500px] max-h-[80vh] overflow-y-auto" align="start">
+                              <div className="space-y-4">
+                                <div className="space-y-1.5">
+                                  <h3 className="font-semibold text-xl">{asp.name}</h3>
+                                  <p className="text-sm text-muted-foreground">サービスの詳細情報</p>
+                                </div>
+
+                                {/* メディア */}
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium text-muted-foreground">メディア</label>
+                                  <div className="flex flex-wrap gap-1">
+                                    {getMediaNames(getMediaIdsForAsp(asp.id)).map((name, idx) => (
+                                      <Badge key={idx} variant="secondary" className="text-xs">
+                                        {name}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* ログインURL */}
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium text-muted-foreground">ログインURL</label>
+                                  {asp.login_url ? (
+                                    <a
+                                      href={asp.login_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-sm text-blue-600 hover:underline break-all"
+                                    >
+                                      {asp.login_url}
+                                    </a>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground">-</p>
+                                  )}
+                                </div>
+
+                                {/* プロンプト */}
+                                <div className="space-y-3">
+                                  <label className="text-sm font-medium text-muted-foreground">プロンプト</label>
+                                  <Textarea
+                                    placeholder="例:&#10;1. {login_url}にアクセスする&#10;2. ユーザー名フィールドに{SECRET:ASP_USERNAME}を入力..."
+                                    value={editingPrompts[asp.id] ?? asp.prompt ?? ""}
+                                    onChange={(e) =>
+                                      setEditingPrompts({
+                                        ...editingPrompts,
+                                        [asp.id]: e.target.value,
+                                      })
+                                    }
+                                    className="min-h-[200px] font-mono text-sm p-4"
+                                  />
+                                  <p className="text-xs text-muted-foreground">
+                                    AIへの操作指示を記述します。シークレットは {`{SECRET:KEY}`} 形式で参照します。
+                                  </p>
+                                  <Button onClick={() => handleSavePrompt(asp.id)} size="sm" className="w-full">
+                                    プロンプトを保存
+                                  </Button>
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         </div>
                       )}
                     </TableCell>
@@ -643,93 +696,6 @@ export function AgentClient() {
         </div>
         </div>
       </div>
-
-      {/* Notion-style Sidebar */}
-      <Sheet open={!!selectedAsp} onOpenChange={(open) => !open && setSelectedAsp(null)}>
-        <SheetContent className="w-[50vw] sm:max-w-[50vw] overflow-y-auto">
-          {selectedAsp && (
-            <>
-              <SheetHeader>
-                <SheetTitle className="text-2xl">{selectedAsp.name}</SheetTitle>
-                <SheetDescription>サービスの詳細情報</SheetDescription>
-              </SheetHeader>
-
-              <div className="space-y-6 p-6">
-                {/* メディア */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">メディア</label>
-                  <div className="flex flex-wrap gap-1">
-                    {getMediaNames(getMediaIdsForAsp(selectedAsp.id)).map((name, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-xs">
-                        {name}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* ログインURL */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">ログインURL</label>
-                  {selectedAsp.login_url ? (
-                    <a
-                      href={selectedAsp.login_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:underline break-all"
-                    >
-                      {selectedAsp.login_url}
-                    </a>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">-</p>
-                  )}
-                </div>
-
-                <Separator />
-
-                {/* 最終実行 */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">最終実行</label>
-                  <p className="text-sm text-muted-foreground">-</p>
-                </div>
-
-                <Separator />
-
-                {/* ステータス */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">ステータス</label>
-                  <p className="text-sm text-muted-foreground">-</p>
-                </div>
-
-                <Separator />
-
-                {/* プロンプト */}
-                <div className="space-y-3">
-                  <label className="text-sm font-medium text-muted-foreground">プロンプト</label>
-                  <Textarea
-                    placeholder="例:&#10;1. {login_url}にアクセスする&#10;2. ユーザー名フィールドに{SECRET:ASP_USERNAME}を入力..."
-                    value={editingPrompts[selectedAsp.id] ?? selectedAsp.prompt ?? ""}
-                    onChange={(e) =>
-                      setEditingPrompts({
-                        ...editingPrompts,
-                        [selectedAsp.id]: e.target.value,
-                      })
-                    }
-                    className="min-h-[300px] font-mono text-sm p-4"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    AIへの操作指示を記述します。シークレットは {`{SECRET:KEY}`} 形式で参照します。
-                  </p>
-                  <Button onClick={() => handleSavePrompt(selectedAsp.id)} size="sm" className="w-full">
-                    プロンプトを保存
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }
