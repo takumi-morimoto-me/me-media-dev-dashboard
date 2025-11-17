@@ -1,3 +1,22 @@
+[project]
+name = "mcp-agent"
+version = "0.1.0"
+description = "AI-powered autonomous scraper agent for ASP data collection"
+requires-python = ">=3.11"
+dependencies = [
+    "playwright>=1.40.0",
+    "supabase>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "google-generativeai>=0.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "pytest>=7.4.0",
+]
+
 [tool.black]
 line-length = 88
 target-version = ["py311"]
@@ -5,3 +24,7 @@ target-version = ["py311"]
 [tool.ruff]
 line-length = 88
 select = ["E", "F", "W", "I"]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"

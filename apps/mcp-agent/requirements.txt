@@ -1,10 +1,12 @@
 # Core dependencies
-playwright
-google-cloud-aiplatform
-google-cloud-secret-manager
-supabase
-python-dotenv
+playwright>=1.40.0
+supabase>=2.0.0
+python-dotenv>=1.0.0
 
-# Linter & Formatter
-ruff
-black
+# Google Gemini API
+google-generativeai>=0.3.0
+
+# Development dependencies
+black>=23.0.0
+ruff>=0.1.0
+pytest>=7.4.0

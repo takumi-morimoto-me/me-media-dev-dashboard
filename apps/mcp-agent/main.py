@@ -1,34 +1,92 @@
-import os
-from dotenv import load_dotenv
-from supabase import create_client, Client
+"""Main entry point for MCP Agent."""
 
-# .envファイルから環境変数を読み込む
-load_dotenv()
+import logging
+import sys
+from config import Settings
+from agent import SupabaseClient, BrowserController, GeminiClient, AgentLoop
 
-# 環境変数からSupabaseのURLとキーを取得
-url: str = os.environ.get("SUPABASE_URL")
-key: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") # サーバーサイドなのでSERVICE_ROLE_KEYを使用
 
-# Supabaseクライアントの作成
-supabase: Client = create_client(url, key)
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+
+logger = logging.getLogger(__name__)
+
 
 def main():
-    """
-    aspsテーブルからデータを取得し、コンソールに出力する
-    """
-    print("Fetching data from 'asps' table...")
-    response = supabase.table('asps').select("*").execute()
+    """Main function to run the agent."""
+    logger.info("=" * 60)
+    logger.info("MCP Agent - AI-Powered ASP Data Collection")
+    logger.info("=" * 60)
 
-    # データ取得成功時
-    if response.data:
-        print("Successfully fetched data:")
-        for row in response.data:
-            print(row)
-    # データ取得失敗時
-    else:
-        print("Failed to fetch data or table is empty.")
-        if hasattr(response, 'error') and response.error:
-            print("Error:", response.error)
+    # Load settings
+    try:
+        settings = Settings.from_env()
+        settings.validate()
+        logger.info("Settings loaded and validated successfully")
+    except ValueError as e:
+        logger.error(f"Configuration error: {e}")
+        sys.exit(1)
+
+    # Initialize clients
+    logger.info("Initializing clients...")
+
+    supabase_client = SupabaseClient(
+        url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+    )
+
+    gemini_client = GeminiClient(
+        api_key=settings.google_api_key,
+        model_name=settings.gemini_model,
+    )
+
+    browser = BrowserController(headless=settings.headless)
+
+    # Create agent loop
+    agent = AgentLoop(
+        supabase_client=supabase_client,
+        browser=browser,
+        gemini_client=gemini_client,
+    )
+
+    # Run scrapers for all ASPs
+    logger.info("Starting autonomous scraping process...")
+
+    try:
+        results = agent.run_all_asps()
+
+        # Print summary
+        logger.info("\n" + "=" * 60)
+        logger.info("FINAL RESULTS")
+        logger.info("=" * 60)
+
+        for asp_name, success in results.items():
+            status = "✅ SUCCESS" if success else "❌ FAILED"
+            logger.info(f"{asp_name}: {status}")
+
+        successful = sum(1 for success in results.values() if success)
+        total = len(results)
+
+        logger.info("=" * 60)
+        logger.info(f"Total: {successful}/{total} successful")
+        logger.info("=" * 60)
+
+        # Exit with appropriate code
+        if successful < total:
+            sys.exit(1)
+
+    except KeyboardInterrupt:
+        logger.info("\nScraping interrupted by user")
+        sys.exit(0)
+
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}", exc_info=True)
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

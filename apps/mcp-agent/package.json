@@ -1,11 +1,15 @@
 {
   "name": "mcp-agent",
-  "version": "1.0.0",
+  "version": "0.1.0",
+  "description": "AI-powered autonomous scraper agent for ASP data collection",
   "private": true,
   "scripts": {
-    "lint": "ruff check . && black --check .",
-    "format": "ruff check . --fix && black .",
-    "build": "if [ \"$VERCEL\" = \"1\" ]; then echo 'Skipping Docker build on Vercel'; else docker build --no-cache -t mcp-agent .; fi",
-    "dev": "bash -c 'source venv/bin/activate && python main.py'"
+    "dev": "python3 main.py",
+    "setup": "pip install -r requirements.txt && playwright install chromium",
+    "test": "pytest tests/",
+    "lint": "ruff check .",
+    "format": "black .",
+    "docker:build": "docker build -t mcp-agent .",
+    "docker:run": "docker run --env-file .env mcp-agent"
   }
 }
