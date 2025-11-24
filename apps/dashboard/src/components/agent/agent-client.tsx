@@ -105,6 +105,7 @@ export function AgentClient() {
         {/* Notion-like Table */}
         <AspsTable
           asps={filteredAsps}
+          selectedMediaId={selectedMediaId}
           onAdd={handleAdd}
           onEdit={handleEdit}
           onDelete={handleDelete}

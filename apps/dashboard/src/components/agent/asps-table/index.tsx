@@ -36,6 +36,7 @@ import {
 
 interface AspsTableProps {
   asps: AspWithCredentials[]
+  selectedMediaId: string | null
   onAdd?: () => void
   onEdit?: (asp: AspWithCredentials) => void
   onDelete?: (asp: AspWithCredentials) => void
@@ -44,6 +45,7 @@ interface AspsTableProps {
 
 export function AspsTable({
   asps,
+  selectedMediaId,
   onAdd,
   onEdit,
   onDelete,
@@ -87,6 +89,7 @@ export function AspsTable({
   }, [columnSizing])
 
   const columns = getColumns({
+    selectedMediaId,
     onEdit,
     onDelete,
   })

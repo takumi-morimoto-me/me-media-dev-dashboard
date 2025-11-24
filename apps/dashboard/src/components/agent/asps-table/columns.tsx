@@ -9,12 +9,13 @@ import { AspWithCredentials } from "./constants"
 import { PasswordCell } from "./cells"
 
 export interface GetColumnsOptions {
+  selectedMediaId: string | null
   onEdit?: (asp: AspWithCredentials) => void
   onDelete?: (asp: AspWithCredentials) => void
 }
 
 export function getColumns(options?: GetColumnsOptions): ColumnDef<AspWithCredentials>[] {
-  const { onEdit, onDelete } = options || {}
+  const { selectedMediaId, onEdit, onDelete } = options || {}
 
   return [
     // チェックボックス
@@ -96,29 +97,37 @@ export function getColumns(options?: GetColumnsOptions): ColumnDef<AspWithCreden
       ),
       enableSorting: false,
     },
-    // ログインID（最初のメディアの認証情報を表示）
+    // ログインID（選択中のメディアの認証情報を表示）
     {
       id: "username",
       header: "ログインID",
       cell: ({ row }) => {
-        const firstCred = row.original.credentials[0]
+        // 選択中のメディアに一致する認証情報を取得
+        const targetCred = selectedMediaId
+          ? row.original.credentials.find(c => c.media_id === selectedMediaId)
+          : row.original.credentials[0]
+
         return (
           <div className="px-2">
-            <PasswordCell value={firstCred?.username_secret_key} />
+            <PasswordCell value={targetCred?.username_secret_key} />
           </div>
         )
       },
       enableSorting: false,
     },
-    // パスワード（最初のメディアの認証情報を表示）
+    // パスワード（選択中のメディアの認証情報を表示）
     {
       id: "password",
       header: "パスワード",
       cell: ({ row }) => {
-        const firstCred = row.original.credentials[0]
+        // 選択中のメディアに一致する認証情報を取得
+        const targetCred = selectedMediaId
+          ? row.original.credentials.find(c => c.media_id === selectedMediaId)
+          : row.original.credentials[0]
+
         return (
           <div className="px-2">
-            <PasswordCell value={firstCred?.password_secret_key} />
+            <PasswordCell value={targetCred?.password_secret_key} />
           </div>
         )
       },
