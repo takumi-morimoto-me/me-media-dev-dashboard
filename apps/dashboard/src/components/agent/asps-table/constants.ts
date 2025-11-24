@@ -1,0 +1,48 @@
+// Tailwindのスペーシングスケールに準拠（1単位 = 4px = 0.25rem）
+export const w = (units: number) => units * 4
+
+// カラムの最小幅（Tailwind準拠）
+export const MIN_COLUMN_WIDTH = w(40) // 160px
+export const CHECKBOX_WIDTH = w(10)   // 40px
+export const NAME_MIN_WIDTH = w(80)   // 320px
+export const PROMPT_MIN_WIDTH = w(40) // 160px
+
+// カラム幅の初期値
+export const DEFAULT_COLUMN_SIZES: Record<string, number> = {
+  select: CHECKBOX_WIDTH,
+  name: w(80),              // 320px
+  media: w(40),             // 160px
+  loginUrl: w(40),          // 160px
+  username: w(40),          // 160px
+  password: w(40),          // 160px
+  prompt: w(40),            // 160px
+}
+
+// localStorage keys
+export const STORAGE_KEY_COLUMN_ORDER = "asps-table-column-order"
+export const STORAGE_KEY_COLUMN_VISIBILITY = "asps-table-column-visibility"
+export const STORAGE_KEY_COLUMN_SIZES = "asps-table-column-sizes"
+
+// ASP型定義
+export interface AspWithCredentials {
+  id: string
+  name: string
+  login_url: string | null
+  prompt: string | null
+  created_at: string
+  updated_at: string | null
+  category: string | null
+  credentials: AspCredential[]
+}
+
+export interface AspCredential {
+  id: string
+  asp_id: string
+  media_id: string
+  username_secret_key: string | null
+  password_secret_key: string | null
+  media: {
+    id: string
+    name: string
+  }
+}
