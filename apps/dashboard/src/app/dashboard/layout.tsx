@@ -21,6 +21,18 @@ export default async function DashboardLayout({
     supabase.from("asp_credentials").select("*"),
   ])
 
+  // デバッグログ
+  console.log("=== Dashboard Layout Data ===")
+  console.log("Media count:", mediaResult.data?.length || 0)
+  console.log("ASPs count:", aspsResult.data?.length || 0)
+  console.log("Credentials count:", credentialsResult.data?.length || 0)
+  if (aspsResult.error) {
+    console.error("ASPs error:", JSON.stringify(aspsResult.error, null, 2))
+  }
+  if (credentialsResult.error) {
+    console.error("Credentials error:", JSON.stringify(credentialsResult.error, null, 2))
+  }
+
   // slugがnullの場合は空文字にする
   const mediaData = (mediaResult.data || []).map(m => ({
     ...m,
