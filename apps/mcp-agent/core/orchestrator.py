@@ -6,6 +6,7 @@ from typing import Optional, List, Dict, Any
 from .database import SupabaseClient
 from .browser import BrowserController
 from .ai_client import GeminiClient
+from .notifier import Notifier
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ class AgentLoop:
         supabase_client: SupabaseClient,
         browser: BrowserController,
         gemini_client: GeminiClient,
+        notifier: Optional[Notifier] = None,
     ):
         """Initialize agent loop.
 
@@ -25,17 +27,20 @@ class AgentLoop:
             supabase_client: Supabase client for database operations
             browser: Browser controller
             gemini_client: Gemini client for AI interpretation
+            notifier: Optional notifier for sending alerts
         """
         self.supabase = supabase_client
         self.browser = browser
         self.gemini = gemini_client
+        self.notifier = notifier or Notifier()
         self.current_asp_data: Optional[Dict[str, Any]] = None
 
-    def run_asp_scraper(self, asp_name: str) -> bool:
+    def run_asp_scraper(self, asp_name: str, execution_type: str = "manual") -> bool:
         """Run scraper for a specific ASP.
 
         Args:
             asp_name: Name of the ASP to scrape
+            execution_type: Type of execution ('daily', 'monthly', 'manual')
 
         Returns:
             True if successful, False otherwise
@@ -55,6 +60,14 @@ class AgentLoop:
 
         # Store current ASP data for use in extract action
         self.current_asp_data = asp_data
+        asp_id = asp_data.get("id")
+
+        # Create execution log
+        log_id = self.supabase.create_execution_log(
+            asp_id=asp_id,
+            execution_type=execution_type,
+            metadata={"asp_name": asp_name}
+        )
 
         # Parse scenario into steps
         steps = self._parse_scenario(scenario)
@@ -63,6 +76,7 @@ class AgentLoop:
         # Start browser
         self.browser.start()
 
+        records_saved = 0
         try:
             # Execute each step
             for i, step in enumerate(steps, 1):
@@ -70,7 +84,7 @@ class AgentLoop:
 
                 # Get current page context
                 page_context = self.browser.get_page_content()
-                
+
                 # Get page screenshot for vision
                 screenshot_base64 = self.browser.get_page_screenshot_base64()
 
@@ -100,8 +114,21 @@ class AgentLoop:
                         if success:
                             logger.info(f"Fallback succeeded with text={extracted_text}")
 
+                # Track records saved from extract commands
+                if success and command.get("action") == "extract":
+                    records_saved = command.get("records_saved", 0)
+
                 if not success:
-                    logger.error(f"Failed to execute step: {step}")
+                    error_msg = f"Failed to execute step: {step}"
+                    logger.error(error_msg)
+                    # Update execution log with failure
+                    if log_id:
+                        self.supabase.update_execution_log(
+                            log_id=log_id,
+                            status="failed",
+                            records_saved=records_saved,
+                            error_message=error_msg
+                        )
                     return False
 
                 # Take screenshot for debugging
@@ -109,18 +136,38 @@ class AgentLoop:
                     f"screenshots/step_{i}_{asp_name}.png"
                 )
 
+            # Update execution log with success
+            if log_id:
+                self.supabase.update_execution_log(
+                    log_id=log_id,
+                    status="success",
+                    records_saved=records_saved
+                )
+
             logger.info(f"Successfully completed scraper for: {asp_name}")
             return True
 
         except Exception as e:
-            logger.error(f"Error during scraping: {e}")
+            error_msg = f"Error during scraping: {e}"
+            logger.error(error_msg)
+            # Update execution log with failure
+            if log_id:
+                self.supabase.update_execution_log(
+                    log_id=log_id,
+                    status="failed",
+                    records_saved=records_saved,
+                    error_message=error_msg
+                )
             return False
 
         finally:
             self.browser.stop()
 
-    def run_all_asps(self) -> Dict[str, bool]:
+    def run_all_asps(self, execution_type: str = "manual") -> Dict[str, bool]:
         """Run scrapers for all ASPs that have scenarios defined.
+
+        Args:
+            execution_type: Type of execution ('daily', 'monthly', 'manual')
 
         Returns:
             Dictionary mapping ASP names to success status
@@ -134,8 +181,16 @@ class AgentLoop:
             logger.info(f"Processing ASP: {asp_name}")
             logger.info(f"{'='*60}\n")
 
-            success = self.run_asp_scraper(asp_name)
+            success = self.run_asp_scraper(asp_name, execution_type)
             results[asp_name] = success
+
+            # Send error notification for failed ASPs
+            if not success and self.notifier:
+                self.notifier.send_error_notification(
+                    asp_name=asp_name,
+                    error_message=f"スクレイピングが失敗しました。ログを確認してください。",
+                    execution_type=execution_type,
+                )
 
             # Wait between ASPs to avoid rate limiting
             import time
@@ -149,6 +204,10 @@ class AgentLoop:
         logger.info(f"\n{'='*60}")
         logger.info(f"Scraping Summary: {successful}/{total} successful")
         logger.info(f"{'='*60}\n")
+
+        # Send summary notification
+        if self.notifier:
+            self.notifier.send_execution_summary(results, execution_type)
 
         return results
 
@@ -189,6 +248,7 @@ class AgentLoop:
 
         if action == "error":
             logger.error(f"Command error: {command.get('message')}")
+            command["records_saved"] = 0
             return False
 
         if action == "navigate":
@@ -304,16 +364,19 @@ class AgentLoop:
 
                 # Parse JSON and save to database
                 if target_table in ["daily_actuals", "monthly_actuals"]:
-                    success = self._save_extracted_data(
+                    saved_count = self._save_extracted_data(
                         extracted_data, target_table, command
                     )
-                    return success
+                    command["records_saved"] = saved_count
+                    return saved_count > 0
                 else:
                     logger.warning(f"Unknown target table: {target_table}")
+                    command["records_saved"] = 0
                     return False
 
             except Exception as e:
                 logger.error(f"Extract failed: {e}")
+                command["records_saved"] = 0
                 return False
 
         else:
@@ -347,7 +410,7 @@ class AgentLoop:
 
     def _save_extracted_data(
         self, extracted_data: str, table_name: str, command: Dict[str, Any]
-    ) -> bool:
+    ) -> int:
         """Save extracted data to Supabase.
 
         Args:
@@ -356,7 +419,7 @@ class AgentLoop:
             command: Command object containing metadata
 
         Returns:
-            True if successful, False otherwise
+            Number of records successfully saved
         """
         import json
 
@@ -371,7 +434,7 @@ class AgentLoop:
                 records = data_obj
             else:
                 logger.error("Unexpected data format")
-                return False
+                return 0
 
             # Get metadata from command
             media_id = command.get("media_id")
@@ -382,7 +445,7 @@ class AgentLoop:
                 logger.error(
                     "Missing required metadata: media_id, account_item_id, or asp_id"
                 )
-                return False
+                return 0
 
             # Save each record
             saved_count = 0
@@ -428,11 +491,11 @@ class AgentLoop:
                     saved_count += 1
 
             logger.info(f"Saved {saved_count}/{len(records)} records to {table_name}")
-            return saved_count > 0
+            return saved_count
 
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse extracted data as JSON: {e}")
-            return False
+            return 0
         except Exception as e:
             logger.error(f"Error saving extracted data: {e}")
-            return False
+            return 0

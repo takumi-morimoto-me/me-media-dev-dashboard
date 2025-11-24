@@ -151,3 +151,85 @@ class SupabaseClient:
         except Exception as e:
             logger.error(f"Error saving monthly actual: {e}")
             return False
+
+    def create_execution_log(
+        self,
+        asp_id: str,
+        execution_type: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Optional[str]:
+        """Create a new execution log entry.
+
+        Args:
+            asp_id: ASP UUID
+            execution_type: Type of execution ('daily', 'monthly', 'manual')
+            metadata: Optional metadata dict
+
+        Returns:
+            Execution log ID if successful, None otherwise
+        """
+        try:
+            data = {
+                "asp_id": asp_id,
+                "execution_type": execution_type,
+                "status": "running",
+                "metadata": metadata or {},
+            }
+
+            response = self.client.table("execution_logs").insert(data).execute()
+
+            if response.data and len(response.data) > 0:
+                log_id = response.data[0]["id"]
+                logger.info(f"Created execution log: {log_id}")
+                return log_id
+            else:
+                logger.error("No data returned from execution log creation")
+                return None
+
+        except Exception as e:
+            logger.error(f"Error creating execution log: {e}")
+            return None
+
+    def update_execution_log(
+        self,
+        log_id: str,
+        status: str,
+        records_saved: int = 0,
+        error_message: Optional[str] = None,
+    ) -> bool:
+        """Update an execution log entry.
+
+        Args:
+            log_id: Execution log UUID
+            status: New status ('success', 'failed', 'partial')
+            records_saved: Number of records saved
+            error_message: Optional error message if failed
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            import datetime
+
+            data = {
+                "status": status,
+                "completed_at": datetime.datetime.now().isoformat(),
+                "records_saved": records_saved,
+            }
+
+            if error_message:
+                data["error_message"] = error_message
+
+            response = (
+                self.client.table("execution_logs")
+                .update(data)
+                .eq("id", log_id)
+                .execute()
+            )
+
+            logger.info(f"Updated execution log {log_id}: {status}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error updating execution log: {e}")
+            return False
