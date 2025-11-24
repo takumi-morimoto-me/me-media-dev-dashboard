@@ -8,39 +8,78 @@ import { createClient } from "@/lib/supabase/server"
 import { DynamicBreadcrumb } from "@/components/layout/header/dynamic-breadcrumb"
 import { DashboardClientLayout } from "@/components/layout/dashboard-client-layout"
 
+type Media = {
+  id: string
+  name: string
+  slug: string
+}
+
+type Asp = {
+  id: string
+  name: string
+  login_url: string | null
+  prompt: string | null
+  created_at: string
+  updated_at: string | null
+}
+
+type AspCredential = {
+  id: string
+  asp_id: string
+  media_id: string
+  username_secret_key: string | null
+  password_secret_key: string | null
+  created_at: string
+  updated_at: string | null
+}
+
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
+  // 環境変数チェック - ビルド時にも実行時にも必要
+  const hasRequiredEnvVars =
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  // メディア、ASP、認証情報を並行取得
-  const [mediaResult, aspsResult, credentialsResult] = await Promise.all([
-    supabase.from("media").select("id, name, slug").order("name"),
-    supabase.from("asps").select("*").order("name"),
-    supabase.from("asp_credentials").select("*"),
-  ])
+  let mediaData: Media[] = []
+  let aspsData: Asp[] = []
+  let credentialsData: AspCredential[] = []
 
-  // デバッグログ
-  console.log("=== Dashboard Layout Data ===")
-  console.log("Media count:", mediaResult.data?.length || 0)
-  console.log("ASPs count:", aspsResult.data?.length || 0)
-  console.log("Credentials count:", credentialsResult.data?.length || 0)
-  if (aspsResult.error) {
-    console.error("ASPs error:", JSON.stringify(aspsResult.error, null, 2))
+  if (hasRequiredEnvVars) {
+    const supabase = await createClient()
+
+    // メディア、ASP、認証情報を並行取得
+    const [mediaResult, aspsResult, credentialsResult] = await Promise.all([
+      supabase.from("media").select("id, name, slug").order("name"),
+      supabase.from("asps").select("*").order("name"),
+      supabase.from("asp_credentials").select("*"),
+    ])
+
+    // デバッグログ
+    console.log("=== Dashboard Layout Data ===")
+    console.log("Media count:", mediaResult.data?.length || 0)
+    console.log("ASPs count:", aspsResult.data?.length || 0)
+    console.log("Credentials count:", credentialsResult.data?.length || 0)
+    if (aspsResult.error) {
+      console.error("ASPs error:", JSON.stringify(aspsResult.error, null, 2))
+    }
+    if (credentialsResult.error) {
+      console.error("Credentials error:", JSON.stringify(credentialsResult.error, null, 2))
+    }
+
+    // slugがnullの場合は空文字にする
+    mediaData = (mediaResult.data || []).map(m => ({
+      ...m,
+      slug: m.slug || ""
+    }))
+    aspsData = aspsResult.data || []
+    credentialsData = credentialsResult.data || []
+  } else {
+    console.warn("⚠️  Supabase environment variables not set. Using empty data for build.")
+    console.warn("Please set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel Project Settings.")
   }
-  if (credentialsResult.error) {
-    console.error("Credentials error:", JSON.stringify(credentialsResult.error, null, 2))
-  }
-
-  // slugがnullの場合は空文字にする
-  const mediaData = (mediaResult.data || []).map(m => ({
-    ...m,
-    slug: m.slug || ""
-  }))
-  const aspsData = aspsResult.data || []
-  const credentialsData = credentialsResult.data || []
 
   return (
     <DashboardClientLayout mediaData={mediaData} aspsData={aspsData} credentialsData={credentialsData}>
