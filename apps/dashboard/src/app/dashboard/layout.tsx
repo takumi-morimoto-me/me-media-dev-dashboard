@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { AppSidebar } from "@/components/layout/sidebar/app-sidebar"
 import { MediaListWrapper } from "@/components/layout/media-list/media-list-wrapper"
 import { UserMenu } from "@/components/layout/header/user-menu"
@@ -49,13 +50,17 @@ export default async function DashboardLayout({
 
         {/* 2nd Column: Media List - Add left margin for sidebar */}
         <div className="ml-12 flex-shrink-0">
-          <MediaListWrapper mediaData={mediaData} aspsData={aspsData} credentialsData={credentialsData} />
+          <Suspense fallback={<div>Loading...</div>}>
+            <MediaListWrapper mediaData={mediaData} aspsData={aspsData} credentialsData={credentialsData} />
+          </Suspense>
         </div>
 
         {/* 3rd Column: Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <header className="bg-background sticky top-0 flex shrink-0 items-center gap-4 border-b px-6 h-12">
-            <DynamicBreadcrumb mediaData={mediaData} />
+            <Suspense fallback={<div>Loading...</div>}>
+              <DynamicBreadcrumb mediaData={mediaData} />
+            </Suspense>
 
             <div className="flex items-center gap-2 ml-auto">
               <ThemeToggle />

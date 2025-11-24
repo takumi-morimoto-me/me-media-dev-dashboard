@@ -107,7 +107,7 @@ export function getColumns(options?: GetColumnsOptions): ColumnDef<AspWithCreden
 
         return (
           <div className="px-2">
-            <PasswordCell value={targetCred?.username_secret_key} />
+            <PasswordCell value={targetCred?.username_secret_key ?? null} />
           </div>
         )
       },
@@ -125,7 +125,7 @@ export function getColumns(options?: GetColumnsOptions): ColumnDef<AspWithCreden
 
         return (
           <div className="px-2">
-            <PasswordCell value={targetCred?.password_secret_key} />
+            <PasswordCell value={targetCred?.password_secret_key ?? null} />
           </div>
         )
       },

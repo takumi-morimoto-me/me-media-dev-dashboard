@@ -29,8 +29,6 @@ import {
   DEFAULT_COLUMN_SIZES,
   MIN_COLUMN_WIDTH,
   CHECKBOX_WIDTH,
-  NAME_MIN_WIDTH,
-  PROMPT_MIN_WIDTH,
   STORAGE_KEY_COLUMN_SIZES,
 } from "./constants"
 
@@ -117,13 +115,6 @@ export function AspsTable({
     defaultColumn: {
       minSize: MIN_COLUMN_WIDTH,
     },
-    // カラムごとの最小幅と最大幅を設定
-    columns: columns.map((col) => ({
-      ...col,
-      minSize: col.id === "select" ? CHECKBOX_WIDTH : col.id === "name" ? NAME_MIN_WIDTH : col.id === "prompt" ? PROMPT_MIN_WIDTH : MIN_COLUMN_WIDTH,
-      maxSize: col.id === "select" ? CHECKBOX_WIDTH : undefined,
-      size: col.id === "select" ? CHECKBOX_WIDTH : undefined,
-    })),
   })
 
   const selectedRows = table.getFilteredSelectedRowModel().rows
