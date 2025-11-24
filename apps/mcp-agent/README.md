@@ -59,6 +59,9 @@ apps/mcp-agent/
 - ✅ **シークレット管理**: 環境変数から安全に取得
 - ✅ **自動保存**: Supabaseに自動保存
 - ✅ **デバッグ機能**: スクリーンショット自動保存
+- ✅ **実行ログ**: 実行履歴と結果をデータベースに記録
+- ✅ **エラー通知**: Slack通知で実行結果を報告
+- ✅ **スケジュール実行**: GitHub Actionsによる日次・月次自動実行
 
 ## 🎯 技術スタック
 
@@ -73,6 +76,43 @@ apps/mcp-agent/
 
 詳細は [docs/TEST_RESULT_REPORT.md](docs/TEST_RESULT_REPORT.md) を参照
 
+## 🕐 スケジュール実行
+
+### GitHub Actionsによる自動実行
+
+**日次データ取得**:
+- 実行時刻: 毎日 9:00 AM JST
+- 対象: 前営業日のデータ
+- 実行タイプ: `daily`
+
+**月次データ取得**:
+- 実行時刻: 毎月1日 10:00 AM JST
+- 対象: 前月の集計データ
+- 実行タイプ: `monthly`
+
+### 手動実行
+
+```bash
+# 日次データ取得
+python scheduled_runner.py daily
+
+# 月次データ取得
+python scheduled_runner.py monthly
+```
+
+### Slack通知の設定
+
+Slack Webhook URLを環境変数に設定すると、実行結果が自動通知されます:
+
+```bash
+export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+```
+
+通知内容:
+- ✅ 実行完了サマリー (成功/失敗件数)
+- ❌ エラー通知 (失敗した ASP の詳細)
+- 📊 取得レコード数
+
 ## 📝 ライセンス
 
 Private
@@ -80,3 +120,4 @@ Private
 ---
 
 **作成日**: 2025-11-10
+**最終更新**: 2025-11-24
