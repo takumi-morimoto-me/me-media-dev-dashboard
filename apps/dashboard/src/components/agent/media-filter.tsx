@@ -28,15 +28,16 @@ interface MediaFilterProps {
   onSelectMedia: (mediaId: string | null) => void;
 }
 
-export function MediaFilter({ media, credentials, selectedMediaId, onSelectMedia }: MediaFilterProps) {
-  // 各メディアごとのASP数をカウント（credentialsベース）
+export function MediaFilter({ media, asps, credentials, selectedMediaId, onSelectMedia }: MediaFilterProps) {
+  // 各メディアごとのASP数をカウント
   const getAspCount = (mediaId: string | null) => {
     if (mediaId === null) {
-      // 全てのメディア: ユニークなasp_idの数
-      return new Set(credentials.map(c => c.asp_id)).size;
+      // 全てのメディア: 全ASPの数
+      return asps.length;
     }
-    // 特定メディア: そのメディアに紐づくASPの数
-    return credentials.filter(c => c.media_id === mediaId).length;
+    // 特定メディア: そのメディアに紐づく認証情報を持つASPの数（ユニーク）
+    const uniqueAspIds = new Set(credentials.filter(c => c.media_id === mediaId).map(c => c.asp_id));
+    return uniqueAspIds.size;
   };
 
   const allMediaOption = {
