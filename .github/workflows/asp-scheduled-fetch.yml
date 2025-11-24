@@ -1,0 +1,118 @@
+name: ASP Scheduled Data Fetch
+
+on:
+  schedule:
+    # Daily fetch: Every day at 9:00 AM JST (00:00 UTC)
+    - cron: '0 0 * * *'
+    # Monthly fetch: 1st day of each month at 10:00 AM JST (01:00 UTC)
+    - cron: '0 1 1 * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Execution mode (daily/monthly)'
+        required: true
+        default: 'daily'
+        type: choice
+        options:
+          - daily
+          - monthly
+
+jobs:
+  fetch-asp-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120  # 2 hours max
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        working-directory: apps/mcp-agent
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Determine execution mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "mode=${{ github.event.inputs.mode }}" >> $GITHUB_OUTPUT
+          elif [ "$(date +%d)" == "01" ]; then
+            echo "mode=monthly" >> $GITHUB_OUTPUT
+          else
+            echo "mode=daily" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run scheduled fetch
+        working-directory: apps/mcp-agent
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          # ASP credentials (add as needed)
+          A8APP_USERNAME: ${{ secrets.A8APP_USERNAME }}
+          A8APP_PASSWORD: ${{ secrets.A8APP_PASSWORD }}
+          AFB_USERNAME: ${{ secrets.AFB_USERNAME }}
+          AFB_PASSWORD: ${{ secrets.AFB_PASSWORD }}
+          ACCESSTRADE_USERNAME: ${{ secrets.ACCESSTRADE_USERNAME }}
+          ACCESSTRADE_PASSWORD: ${{ secrets.ACCESSTRADE_PASSWORD }}
+          AMAZON_USERNAME: ${{ secrets.AMAZON_USERNAME }}
+          AMAZON_PASSWORD: ${{ secrets.AMAZON_PASSWORD }}
+          CASTALK_USERNAME: ${{ secrets.CASTALK_USERNAME }}
+          CASTALK_PASSWORD: ${{ secrets.CASTALK_PASSWORD }}
+          CIRCUITX_USERNAME: ${{ secrets.CIRCUITX_USERNAME }}
+          CIRCUITX_PASSWORD: ${{ secrets.CIRCUITX_PASSWORD }}
+          DMM_USERNAME: ${{ secrets.DMM_USERNAME }}
+          DMM_PASSWORD: ${{ secrets.DMM_PASSWORD }}
+          IMOBILE_USERNAME: ${{ secrets.IMOBILE_USERNAME }}
+          IMOBILE_PASSWORD: ${{ secrets.IMOBILE_PASSWORD }}
+          PRESCO_USERNAME: ${{ secrets.PRESCO_USERNAME }}
+          PRESCO_PASSWORD: ${{ secrets.PRESCO_PASSWORD }}
+          SKYFLAG_USERNAME: ${{ secrets.SKYFLAG_USERNAME }}
+          SKYFLAG_PASSWORD: ${{ secrets.SKYFLAG_PASSWORD }}
+          SLVRBULLET_USERNAME: ${{ secrets.SLVRBULLET_USERNAME }}
+          SLVRBULLET_PASSWORD: ${{ secrets.SLVRBULLET_PASSWORD }}
+          SMAAD_USERNAME: ${{ secrets.SMAAD_USERNAME }}
+          SMAAD_PASSWORD: ${{ secrets.SMAAD_PASSWORD }}
+          SMARTC_USERNAME: ${{ secrets.SMARTC_USERNAME }}
+          SMARTC_PASSWORD: ${{ secrets.SMARTC_PASSWORD }}
+          TG_USERNAME: ${{ secrets.TG_USERNAME }}
+          TG_PASSWORD: ${{ secrets.TG_PASSWORD }}
+          ZUCKS_USERNAME: ${{ secrets.ZUCKS_USERNAME }}
+          ZUCKS_PASSWORD: ${{ secrets.ZUCKS_PASSWORD }}
+          ULTIGA_USERNAME: ${{ secrets.ULTIGA_USERNAME }}
+          ULTIGA_PASSWORD: ${{ secrets.ULTIGA_PASSWORD }}
+          DOCOMO_USERNAME: ${{ secrets.DOCOMO_USERNAME }}
+          DOCOMO_PASSWORD: ${{ secrets.DOCOMO_PASSWORD }}
+          VALUECOMMERCE_USERNAME: ${{ secrets.VALUECOMMERCE_USERNAME }}
+          VALUECOMMERCE_PASSWORD: ${{ secrets.VALUECOMMERCE_PASSWORD }}
+          LINKSHARE_USERNAME: ${{ secrets.LINKSHARE_USERNAME }}
+          LINKSHARE_PASSWORD: ${{ secrets.LINKSHARE_PASSWORD }}
+        run: |
+          python scheduled_runner.py ${{ steps.mode.outputs.mode }}
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ steps.mode.outputs.mode }}-${{ github.run_number }}
+          path: apps/mcp-agent/screenshots/
+          retention-days: 7
+
+      - name: Notify on failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'ASP ${{ steps.mode.outputs.mode }} data fetch failed'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
