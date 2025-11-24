@@ -3,8 +3,6 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Trash2, Pencil } from "lucide-react"
 import { AspWithCredentials } from "./constants"
 import { PasswordCell } from "./cells"
 
@@ -15,7 +13,7 @@ export interface GetColumnsOptions {
 }
 
 export function getColumns(options?: GetColumnsOptions): ColumnDef<AspWithCredentials>[] {
-  const { selectedMediaId, onEdit, onDelete } = options || {}
+  const { selectedMediaId } = options || {}
 
   return [
     // チェックボックス
