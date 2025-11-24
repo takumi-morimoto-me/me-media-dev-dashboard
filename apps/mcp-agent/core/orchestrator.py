@@ -70,9 +70,14 @@ class AgentLoop:
 
                 # Get current page context
                 page_context = self.browser.get_page_content()
+                
+                # Get page screenshot for vision
+                screenshot_base64 = self.browser.get_page_screenshot_base64()
 
                 # Ask Gemini to interpret the step
-                command = self.gemini.interpret_scenario_step(step, page_context)
+                command = self.gemini.interpret_scenario_step(
+                    step, page_context, screenshot_base64
+                )
 
                 # Execute the command
                 success = self._execute_command(command)

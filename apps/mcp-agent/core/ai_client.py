@@ -30,13 +30,14 @@ class GeminiClient:
         logger.info(f"Gemini client initialized with model: {model_name}")
 
     def interpret_scenario_step(
-        self, scenario_step: str, page_context: str
+        self, scenario_step: str, page_context: str, screenshot_base64: Optional[str] = None
     ) -> Dict[str, Any]:
         """Interpret a scenario step and return the next action to take.
 
         Args:
             scenario_step: A single step from the scenario (e.g., "Click the login button")
             page_context: Current page HTML or simplified context
+            screenshot_base64: Optional base64 encoded screenshot of the page
 
         Returns:
             Dictionary containing:
@@ -45,10 +46,17 @@ class GeminiClient:
             - value: Value to input (for "fill" actions)
             - data: Extracted data (for "extract" actions)
         """
-        prompt = self._build_interpretation_prompt(scenario_step, page_context)
+        prompt_parts = [self._build_interpretation_prompt(scenario_step, page_context)]
+        
+        if screenshot_base64:
+            prompt_parts.append({
+                "mime_type": "image/jpeg",
+                "data": screenshot_base64
+            })
+            logger.info("Image data included in prompt")
 
         try:
-            response = self.model.generate_content(prompt)
+            response = self.model.generate_content(prompt_parts)
             result = self._parse_gemini_response(response.text)
 
             logger.info(f"Interpreted step: {scenario_step} -> {result}")
@@ -71,8 +79,8 @@ class GeminiClient:
             Formatted prompt string
         """
         return f"""あなたはWebブラウザ操作のエキスパートです。
-
-以下のシナリオステップを、具体的なブラウザ操作コマンドに変換してください。
+提供されたスクリーンショット（もしあれば）とHTMLコンテキストを使用して、
+以下のシナリオステップを具体的なブラウザ操作コマンドに変換してください。
 
 【シナリオステップ】
 {scenario_step}

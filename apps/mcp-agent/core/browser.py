@@ -63,17 +63,41 @@ class BrowserController:
 
         return self.page.content()
 
-    def get_page_screenshot(self, path: str) -> None:
-        """Take screenshot of current page.
+    def get_page_screenshot(self, path: str) -> bool:
+        """Take a screenshot of the current page.
 
         Args:
-            path: File path to save screenshot
+            path: Path to save the screenshot
+
+        Returns:
+            True if successful, False otherwise
         """
         if not self.page:
-            raise RuntimeError("Browser not started. Call start() first.")
+            return False
 
-        self.page.screenshot(path=path, full_page=True)
-        logger.info(f"Screenshot saved to: {path}")
+        try:
+            self.page.screenshot(path=path)
+            return True
+        except Exception as e:
+            logger.error(f"Screenshot failed: {e}")
+            return False
+
+    def get_page_screenshot_base64(self) -> Optional[str]:
+        """Take a screenshot of the current page and return as base64 string.
+
+        Returns:
+            Base64 encoded screenshot string, or None if failed
+        """
+        if not self.page:
+            return None
+
+        try:
+            import base64
+            screenshot_bytes = self.page.screenshot(type='jpeg', quality=70)
+            return base64.b64encode(screenshot_bytes).decode('utf-8')
+        except Exception as e:
+            logger.error(f"Base64 screenshot failed: {e}")
+            return None
 
     def execute_command(self, command: str) -> bool:
         """Execute a browser command (to be interpreted by AI).
