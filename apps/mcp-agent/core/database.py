@@ -187,6 +187,10 @@ class SupabaseClient:
                 return None
 
         except Exception as e:
+            # If table doesn't exist, just log warning and continue
+            if "execution_logs" in str(e) and ("not exist" in str(e).lower() or "PGRST205" in str(e)):
+                logger.warning(f"execution_logs table not found, skipping logging: {e}")
+                return None
             logger.error(f"Error creating execution log: {e}")
             return None
 
@@ -208,6 +212,10 @@ class SupabaseClient:
         Returns:
             True if successful, False otherwise
         """
+        # If log_id is None (table doesn't exist), skip update
+        if not log_id:
+            return True
+
         try:
             import datetime
 
@@ -231,5 +239,9 @@ class SupabaseClient:
             return True
 
         except Exception as e:
+            # If table doesn't exist, just log warning and continue
+            if "execution_logs" in str(e) and ("not exist" in str(e).lower() or "PGRST205" in str(e)):
+                logger.warning(f"execution_logs table not found, skipping logging: {e}")
+                return True
             logger.error(f"Error updating execution log: {e}")
             return False

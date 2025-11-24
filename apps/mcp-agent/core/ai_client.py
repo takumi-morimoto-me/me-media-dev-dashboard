@@ -24,8 +24,31 @@ class GeminiClient:
         # Configure Gemini API
         genai.configure(api_key=api_key)
 
-        # Create generative model
-        self.model = genai.GenerativeModel(model_name)
+        # Configure safety settings to be more permissive
+        safety_settings = [
+            {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "BLOCK_NONE"
+            },
+            {
+                "category": "HARM_CATEGORY_HATE_SPEECH",
+                "threshold": "BLOCK_NONE"
+            },
+            {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "BLOCK_NONE"
+            },
+            {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "BLOCK_NONE"
+            }
+        ]
+
+        # Create generative model with safety settings
+        self.model = genai.GenerativeModel(
+            model_name,
+            safety_settings=safety_settings
+        )
 
         logger.info(f"Gemini client initialized with model: {model_name}")
 
@@ -57,6 +80,23 @@ class GeminiClient:
 
         try:
             response = self.model.generate_content(prompt_parts)
+
+            # Check if response was blocked
+            if not response.candidates or not response.parts:
+                logger.warning(f"Response blocked or empty. Prompt feedback: {response.prompt_feedback if hasattr(response, 'prompt_feedback') else 'N/A'}")
+
+                # If screenshot was included, retry without it
+                if screenshot_base64:
+                    logger.info("Retrying without screenshot...")
+                    prompt_parts_no_image = [self._build_interpretation_prompt(scenario_step, page_context)]
+                    response = self.model.generate_content(prompt_parts_no_image)
+
+                    if not response.candidates or not response.parts:
+                        logger.error("Response still blocked after removing screenshot")
+                        return {"action": "error", "message": "Gemini response was blocked by safety filters"}
+                else:
+                    return {"action": "error", "message": "Gemini response was blocked by safety filters"}
+
             result = self._parse_gemini_response(response.text)
 
             logger.info(f"Interpreted step: {scenario_step} -> {result}")

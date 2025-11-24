@@ -77,8 +77,6 @@ def main():
         logger.info("\nScraping interrupted by user")
     except Exception as e:
         logger.error(f"Unexpected error: {e}", exc_info=True)
-    finally:
-        browser.stop()
 
 if __name__ == "__main__":
     main()

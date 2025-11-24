@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import FinancialsTable from "@/components/financials/financials-table";
 import AspFinancialsTable from "@/components/financials/asp-financials-table";
@@ -93,6 +93,7 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
   const searchParams = useSearchParams();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [displayUnit, setDisplayUnit] = useState<DisplayUnit>('monthly');
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   const mediaId = searchParams.get('media') || 'all';
   const currentYear = parseInt(searchParams.get('year') || new Date().getFullYear().toString());
@@ -326,6 +327,36 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
     return { headers, rows, data: aggregatedData };
   }, [aspMonthlyData, aspDailyData, displayUnit, fiscalYearStartMonth, selectedYear]);
 
+  // Scroll to current month on mount or when displayUnit changes
+  useEffect(() => {
+    if (tableContainerRef.current && displayUnit === 'monthly') {
+      const currentMonth = new Date().getMonth() + 1; // 1-12
+      const monthIndex = tableData.headers.findIndex(h => {
+        const month = parseInt(h.key.split('-')[1]);
+        return month === currentMonth;
+      });
+
+      if (monthIndex !== -1) {
+        // Wait for the table to render
+        setTimeout(() => {
+          const tableContainer = tableContainerRef.current;
+          if (!tableContainer) return;
+
+          // Find the scrollable container (the div with overflow-x-auto)
+          const scrollableDiv = tableContainer.querySelector('.overflow-x-auto') as HTMLDivElement;
+          if (!scrollableDiv) return;
+
+          // Calculate scroll position
+          // Each column is approximately 100px min-width + padding
+          const columnWidth = 120; // Approximate width per column
+          const scrollPosition = Math.max(0, (monthIndex - 1) * columnWidth);
+
+          scrollableDiv.scrollLeft = scrollPosition;
+        }, 100);
+      }
+    }
+  }, [displayUnit, tableData.headers]);
+
   const activeFiltersCount = (selectedYear !== currentYearNum ? 1 : 0) + (viewMode !== 'all' ? 1 : 0);
 
   return (
@@ -486,13 +517,15 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
         </ToggleGroup>
       </div>
 
-      <FinancialsTable
-        headers={tableData.headers}
-        rows={tableData.rows}
-        data={tableData.data}
-        viewMode={viewMode}
-        onDataChange={handleImportComplete}
-      />
+      <div ref={tableContainerRef}>
+        <FinancialsTable
+          headers={tableData.headers}
+          rows={tableData.rows}
+          data={tableData.data}
+          viewMode={viewMode}
+          onDataChange={handleImportComplete}
+        />
+      </div>
 
       {aspTableData.rows.length > 0 && (
         <div className="space-y-2">
