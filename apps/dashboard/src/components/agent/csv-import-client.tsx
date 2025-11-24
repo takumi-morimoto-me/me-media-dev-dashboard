@@ -43,11 +43,11 @@ export function CsvImportClient({ trigger }: CsvImportClientProps) {
       rows.push({
         name: values[0] || '',
         login_url: values[1] || '',
-        category: values[2] || '',
-        prompt: values[3] || '',
-        media_name: values[4] || '',
-        username: values[5] || '',
-        password: values[6] || '',
+        username: values[2] || '',
+        password: values[3] || '',
+        prompt: values[4] || '',
+        media_name: values[5] || '',
+        content_type: values[6] || '',
       });
     }
 
@@ -149,7 +149,7 @@ export function CsvImportClient({ trigger }: CsvImportClientProps) {
 
   // テンプレートダウンロード
   const handleDownloadTemplate = () => {
-    const template = 'name,login_url,category,prompt,media_name,username,password\n# 例: A8.net,https://www.a8.net/,ASP,A8.netのデータを取得,ReRe,testuser,testpass\n# 例: もしもアフィリエイト,https://af.moshimo.com/,ASP,もしものデータを取得,,,\n# 同じASP名で複数行を書くことで、複数メディアの認証情報を登録できます\n';
+    const template = 'name,login_url,username,password,prompt,media_name,content_type\n# 例: A8.net,https://www.a8.net/,testuser,testpass,A8.netのデータを取得,ReRe,article\n# 例: もしもアフィリエイト,https://af.moshimo.com/,,,もしものデータを取得,,video\n# 同じASP名で複数行を書くことで、複数メディアの認証情報を登録できます\n# content_typeは article または video を指定してください\n';
     const blob = new Blob([template], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -213,7 +213,7 @@ export function CsvImportClient({ trigger }: CsvImportClientProps) {
           </div>
 
           {/* アップロードエリア */}
-          <Card>
+          <Card className="shadow-none">
             <CardHeader>
               <CardTitle>CSVファイルをアップロード</CardTitle>
               <CardDescription>
@@ -250,7 +250,7 @@ export function CsvImportClient({ trigger }: CsvImportClientProps) {
           </Card>
 
           {/* CSVフォーマット説明 */}
-          <Card>
+          <Card className="shadow-none">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Info className="h-5 w-5" />
@@ -258,19 +258,19 @@ export function CsvImportClient({ trigger }: CsvImportClientProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="bg-muted p-4 rounded-md font-mono text-sm">
-                name,login_url,category,prompt,media_name,username,password<br />
-                A8.net,https://www.a8.net/,ASP,A8.netのデータを取得,ReRe,testuser,testpass<br />
-                もしもアフィリエイト,https://af.moshimo.com/,ASP,もしものデータを取得,,,
+              <div className="bg-muted p-4 rounded-md font-mono text-sm overflow-x-auto break-all whitespace-pre-wrap">
+                name,login_url,username,password,prompt,media_name,content_type<br />
+                A8.net,https://www.a8.net/,testuser,testpass,A8.netのデータを取得,ReRe,article<br />
+                もしもアフィリエイト,https://af.moshimo.com/,,,もしものデータを取得,,video
               </div>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                 <li><strong>name</strong> (必須): ASP名</li>
                 <li><strong>login_url</strong> (必須): ログインページのURL</li>
-                <li><strong>category</strong> (任意): カテゴリ</li>
-                <li><strong>prompt</strong> (任意): AI操作プロンプト</li>
-                <li><strong>media_name</strong> (任意): メディア名（例: ReRe, Mortorz）</li>
                 <li><strong>username</strong> (任意): ログインユーザー名</li>
                 <li><strong>password</strong> (任意): ログインパスワード</li>
+                <li><strong>prompt</strong> (任意): AI操作プロンプト</li>
+                <li><strong>media_name</strong> (任意): メディア名（例: ReRe, Mortorz）</li>
+                <li><strong>content_type</strong> (任意): コンテンツタイプ（article または video）</li>
               </ul>
               <div className="text-sm text-muted-foreground space-y-2">
                 <p>
@@ -281,6 +281,7 @@ export function CsvImportClient({ trigger }: CsvImportClientProps) {
                   <li>同じASP名で複数行書くことで、複数メディアの認証情報を登録できます</li>
                   <li>認証情報を登録する場合、media_nameは必須です</li>
                   <li>username, passwordは任意で、片方だけでも登録可能です</li>
+                  <li>content_typeは article（記事）または video（動画）を指定できます</li>
                 </ul>
               </div>
             </CardContent>
@@ -288,7 +289,7 @@ export function CsvImportClient({ trigger }: CsvImportClientProps) {
 
           {/* インポート結果 */}
           {importResult && (
-            <Card>
+            <Card className="shadow-none">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <CheckCircle2 className="h-5 w-5 text-green-600" />

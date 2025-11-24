@@ -190,11 +190,11 @@ export async function updateAspMedias(aspId: string, mediaIds: string[]) {
 export interface CsvImportRow {
   name: string;
   login_url: string;
-  category?: string;
-  prompt?: string;
-  media_name?: string;
   username?: string;
   password?: string;
+  prompt?: string;
+  media_name?: string;
+  content_type?: string;
 }
 
 export interface CsvImportResult {
@@ -258,7 +258,6 @@ export async function bulkImportAspsFromCsv(rows: CsvImportRow[]): Promise<{ dat
     const aspData = {
       name: firstRow.name.trim(),
       login_url: firstRow.login_url.trim(),
-      category: firstRow.category?.trim() || null,
       prompt: firstRow.prompt?.trim() || null,
     };
 
@@ -287,7 +286,6 @@ export async function bulkImportAspsFromCsv(rows: CsvImportRow[]): Promise<{ dat
         .from("asps")
         .update({
           login_url: aspData.login_url,
-          category: aspData.category,
           prompt: aspData.prompt,
         })
         .eq("id", aspId);
@@ -438,7 +436,7 @@ export async function exportAspsAsCsv(): Promise<{ data?: string; error?: string
   // ASPと認証情報を取得
   const { data: asps, error: aspsError } = await supabase
     .from("asps")
-    .select("id, name, login_url, category, prompt")
+    .select("id, name, login_url, prompt")
     .order("created_at", { ascending: true });
 
   if (aspsError) {
@@ -455,14 +453,13 @@ export async function exportAspsAsCsv(): Promise<{ data?: string; error?: string
   }
 
   // CSVヘッダー
-  let csvContent = "name,login_url,category,prompt,media_name,username,password\n";
+  let csvContent = "name,login_url,username,password,prompt,media_name,content_type\n";
 
   // データ行を追加
   if (asps && asps.length > 0) {
     for (const asp of asps) {
       const name = (asp.name || "").replace(/,/g, "，"); // カンマをエスケープ
       const loginUrl = (asp.login_url || "").replace(/,/g, "，");
-      const category = (asp.category || "").replace(/,/g, "，");
       const prompt = (asp.prompt || "").replace(/,/g, "，");
 
       // このASPに紐づく認証情報を取得
@@ -476,12 +473,13 @@ export async function exportAspsAsCsv(): Promise<{ data?: string; error?: string
             : "";
           const username = (cred.username_secret_key || "").replace(/,/g, "，");
           const password = (cred.password_secret_key || "").replace(/,/g, "，");
+          const contentType = ""; // content_typeは現在DBに保存されていないため空
 
-          csvContent += `${name},${loginUrl},${category},${prompt},${mediaName},${username},${password}\n`;
+          csvContent += `${name},${loginUrl},${username},${password},${prompt},${mediaName},${contentType}\n`;
         }
       } else {
         // 認証情報がない場合、基本情報のみ出力
-        csvContent += `${name},${loginUrl},${category},${prompt},,,\n`;
+        csvContent += `${name},${loginUrl},,,${prompt},,\n`;
       }
     }
   }
