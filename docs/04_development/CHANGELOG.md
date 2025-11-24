@@ -4,6 +4,61 @@
 
 ---
 
+## 2025-11-24: ASP管理画面のUI/UX大幅改善
+
+### Notion-like ASPテーブルビューの実装
+
+**実施内容**:
+- Tanstack React Tableを使用したNotionライクなテーブルUI実装
+- カラムリサイズ機能の追加
+- パスワード/ログインID表示の改善
+
+**主な機能**:
+
+1. **テーブル機能**
+   - カラムリサイズ機能（@tanstack/react-table v8使用）
+   - LocalStorageによるカラム幅の永続化
+   - チェックボックス40px固定幅、中央配置
+   - サービス名320px、その他160pxの初期幅設定
+   - セルテキストのtruncate処理（スプレッドシートスタイル）
+
+2. **認証情報表示**
+   - パスワード/ログインIDの表示/非表示切り替え機能
+   - 目のアイコンでトグル可能
+   - メディアフィルター連動表示
+     - 特定メディア選択時: そのメディアのID/PWを表示
+     - 全メディア選択時: 最初のメディアのID/PWを表示
+
+3. **CSV機能の改善**
+   - カラム順序変更: `name, login_url, username, password, prompt, media_name, content_type`
+   - categoryフィールドを削除
+   - content_typeフィールドを追加（article/video選択用）
+   - テンプレートとフォーマット説明の更新
+   - Popover内のCardコンポーネントから影を削除
+
+4. **データ取得の修正**
+   - Supabase RLS問題の解決
+   - `@supabase/ssr`から`@supabase/supabase-js`に変更
+   - SERVICE_ROLE_KEYを使用してRLSをバイパス
+   - メディアフィルターのASPカウント計算修正
+
+**データベースマイグレーション**:
+- `019_add_asp_rls_policies.sql`: ASPテーブルのRLSポリシー追加
+- `020_fix_asp_rls_policies.sql`: anon/authenticatedロールへの権限付与
+
+**技術的な改善**:
+- ユーザーセッションがSERVICE_ROLE_KEYを上書きする問題を解決
+- メディアごとの異なるID/PW管理に対応
+- カラム幅の制約設定（minSize, maxSize）
+
+**実装フェーズ**:
+- ✅ テーブルビュー実装完了
+- ✅ CSV機能改善完了
+- ✅ メディアフィルター連動完了
+- ✅ RLS/データ取得問題解決完了
+
+---
+
 ## 2025-11-04 (午後): ドキュメントMECE整理・圧縮
 
 ### ドキュメント構造の最適化
