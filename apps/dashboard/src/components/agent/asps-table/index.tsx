@@ -39,6 +39,7 @@ interface AspsTableProps {
   onEdit?: (asp: AspWithCredentials) => void
   onDelete?: (asp: AspWithCredentials) => void
   onBulkDelete?: (aspIds: string[]) => void
+  onUrlUpdate?: (aspId: string, newUrl: string) => Promise<void>
 }
 
 export function AspsTable({
@@ -48,6 +49,7 @@ export function AspsTable({
   onEdit,
   onDelete,
   onBulkDelete,
+  onUrlUpdate,
 }: AspsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -90,6 +92,7 @@ export function AspsTable({
     selectedMediaId,
     onEdit,
     onDelete,
+    onUrlUpdate,
   })
 
   const table = useReactTable({

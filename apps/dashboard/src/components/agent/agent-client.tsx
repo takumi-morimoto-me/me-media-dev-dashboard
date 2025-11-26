@@ -93,6 +93,18 @@ export function AgentClient() {
     setIsAddDialogOpen(true);
   };
 
+  // URL更新ハンドラ
+  const handleUrlUpdate = async (aspId: string, newUrl: string) => {
+    const result = await updateAsp(aspId, { login_url: newUrl });
+
+    if (result.error) {
+      toast.error(result.error);
+      throw new Error(result.error);
+    } else {
+      toast.success("URLを更新しました");
+    }
+  };
+
   return (
     <div className="w-full h-full pr-6">
       {/* Table Area */}
@@ -110,6 +122,7 @@ export function AgentClient() {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onBulkDelete={handleBulkDelete}
+          onUrlUpdate={handleUrlUpdate}
         />
       </div>
 

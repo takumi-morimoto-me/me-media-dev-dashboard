@@ -4,16 +4,17 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { AspWithCredentials } from "./constants"
-import { PasswordCell } from "./cells"
+import { PasswordCell, EditableUrlCell } from "./cells"
 
 export interface GetColumnsOptions {
   selectedMediaId: string | null
   onEdit?: (asp: AspWithCredentials) => void
   onDelete?: (asp: AspWithCredentials) => void
+  onUrlUpdate?: (aspId: string, newUrl: string) => Promise<void>
 }
 
 export function getColumns(options?: GetColumnsOptions): ColumnDef<AspWithCredentials>[] {
-  const { selectedMediaId } = options || {}
+  const { selectedMediaId, onUrlUpdate } = options || {}
 
   return [
     // チェックボックス
@@ -77,21 +78,14 @@ export function getColumns(options?: GetColumnsOptions): ColumnDef<AspWithCreden
       accessorKey: "login_url",
       header: "ログインURL",
       cell: ({ row }) => (
-        <div className="px-2 text-sm">
-          {row.original.login_url ? (
-            <a
-              href={row.original.login_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {row.original.login_url}
-            </a>
-          ) : (
-            <span className="text-muted-foreground">-</span>
-          )}
-        </div>
+        <EditableUrlCell
+          value={row.original.login_url}
+          onSave={async (newUrl) => {
+            if (onUrlUpdate) {
+              await onUrlUpdate(row.original.id, newUrl)
+            }
+          }}
+        />
       ),
       enableSorting: false,
     },
