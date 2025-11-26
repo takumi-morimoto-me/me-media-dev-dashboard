@@ -14,6 +14,11 @@ export const navigationData = [
     url: "/dashboard/agent",
     icon: "Bot",
   },
+  {
+    title: "設定",
+    url: "/dashboard/settings",
+    icon: "Settings",
+  },
 ] as const;
 
 export const workspaceData = {

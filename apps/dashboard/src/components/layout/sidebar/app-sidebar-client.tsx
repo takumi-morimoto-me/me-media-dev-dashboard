@@ -4,13 +4,14 @@ import * as React from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Table, Bot } from "lucide-react"
+import { LayoutDashboard, Table, Bot, Settings } from "lucide-react"
 
 // Icon mapping
 const iconMap = {
   LayoutDashboard,
   Table,
   Bot,
+  Settings,
 } as const;
 
 // Define types for props
