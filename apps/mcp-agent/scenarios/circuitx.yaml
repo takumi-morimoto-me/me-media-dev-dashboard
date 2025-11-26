@@ -1,0 +1,91 @@
+# CircuitX シナリオ定義
+name: circuitx
+display_name: "CircuitX（ビギナーズ）"
+asp_name_in_db: "CircuitX（ビギナーズ）"
+login_url: https://x-dashboard.cir.io/
+
+credentials:
+  username_key: CIRCUITX_USERNAME
+  password_key: CIRCUITX_PASSWORD
+
+# 月次データ取得シナリオ
+monthly:
+  description: "月別レポートから発生報酬を取得"
+  actions:
+    - action: navigate
+      value: https://x-dashboard.cir.io/
+    - action: wait
+      milliseconds: 3000
+    # ログインフォームを探して入力
+    - action: fill
+      selector: "input[type='email'], input[name='email'], input[placeholder*='メール'], input[placeholder*='mail']"
+      value: "{SECRET:CIRCUITX_USERNAME}"
+    - action: fill
+      selector: "input[type='password'], input[name='password']"
+      value: "{SECRET:CIRCUITX_PASSWORD}"
+    - action: click
+      selector: "button[type='submit'], input[type='submit'], button:has-text('ログイン'), button:has-text('Login')"
+    - action: wait
+      milliseconds: 5000
+    # レポートページに移動
+    - action: click
+      selector: "a:has-text('レポート'), a:has-text('Report'), a[href*='report']"
+    - action: wait
+      milliseconds: 3000
+    # 月別レポートを選択
+    - action: click
+      selector: "a:has-text('月別'), button:has-text('月別'), [data-tab='monthly']"
+    - action: wait
+      milliseconds: 3000
+    # スクリーンショットを撮る
+    - action: screenshot
+      path: "/tmp/circuitx_monthly.png"
+    # データ抽出
+    - action: extract
+      selector: table
+      target: actuals
+
+# 日次データ取得シナリオ
+daily:
+  description: "日別レポートから発生報酬を取得"
+  actions:
+    - action: navigate
+      value: https://x-dashboard.cir.io/
+    - action: wait
+      milliseconds: 3000
+    # ログインフォームを探して入力
+    - action: fill
+      selector: "input[type='email'], input[name='email'], input[placeholder*='メール'], input[placeholder*='mail']"
+      value: "{SECRET:CIRCUITX_USERNAME}"
+    - action: fill
+      selector: "input[type='password'], input[name='password']"
+      value: "{SECRET:CIRCUITX_PASSWORD}"
+    - action: click
+      selector: "button[type='submit'], input[type='submit'], button:has-text('ログイン'), button:has-text('Login')"
+    - action: wait
+      milliseconds: 5000
+    # レポートページに移動
+    - action: click
+      selector: "a:has-text('レポート'), a:has-text('Report'), a[href*='report']"
+    - action: wait
+      milliseconds: 3000
+    # 日別レポートを選択
+    - action: click
+      selector: "a:has-text('日別'), button:has-text('日別'), [data-tab='daily']"
+    - action: wait
+      milliseconds: 3000
+    # スクリーンショットを撮る
+    - action: screenshot
+      path: "/tmp/circuitx_daily.png"
+    # データ抽出
+    - action: extract
+      selector: table
+      target: daily_actuals
+
+# リトライ設定
+retry:
+  max_attempts: 3
+  delay_ms: 2000
+  retry_on:
+    - timeout
+    - element_not_found
