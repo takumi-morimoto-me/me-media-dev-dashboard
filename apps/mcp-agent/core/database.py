@@ -152,6 +152,28 @@ class SupabaseClient:
             logger.error(f"Error saving monthly actual: {e}")
             return False
 
+    def save_actual(
+        self,
+        date: str,
+        amount: float,
+        media_id: str,
+        account_item_id: str,
+        asp_id: str,
+    ) -> bool:
+        """Save actual data to database (alias for save_monthly_actual).
+
+        Args:
+            date: Date in YYYY-MM-DD format
+            amount: Amount value
+            media_id: Media UUID
+            account_item_id: Account item UUID
+            asp_id: ASP UUID
+
+        Returns:
+            True if successful, False otherwise
+        """
+        return self.save_monthly_actual(date, amount, media_id, account_item_id, asp_id)
+
     def create_execution_log(
         self,
         asp_id: str,

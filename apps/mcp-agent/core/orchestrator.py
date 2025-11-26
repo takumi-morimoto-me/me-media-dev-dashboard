@@ -2,13 +2,22 @@
 
 import logging
 import re
+import time
 from typing import Optional, List, Dict, Any
 from .database import SupabaseClient
 from .browser import BrowserController
 from .ai_client import GeminiClient
 from .notifier import Notifier
+from .scenario_loader import get_scenario_loader
 
 logger = logging.getLogger(__name__)
+
+# Default retry configuration
+DEFAULT_RETRY_CONFIG = {
+    "max_attempts": 3,
+    "delay_ms": 2000,
+    "retry_on": ["timeout", "element_not_found"],
+}
 
 
 class AgentLoop:
@@ -20,6 +29,7 @@ class AgentLoop:
         browser: BrowserController,
         gemini_client: GeminiClient,
         notifier: Optional[Notifier] = None,
+        debug_mode: bool = False,
     ):
         """Initialize agent loop.
 
@@ -28,6 +38,7 @@ class AgentLoop:
             browser: Browser controller
             gemini_client: Gemini client for AI interpretation
             notifier: Optional notifier for sending alerts
+            debug_mode: Enable debug mode with extra logging and screenshots
         """
         self.supabase = supabase_client
         self.browser = browser
@@ -35,30 +46,78 @@ class AgentLoop:
         self.notifier = notifier or Notifier()
         self.current_asp_data: Optional[Dict[str, Any]] = None
         self.current_media_id: Optional[str] = None
+        self.debug_mode = debug_mode
+        self.retry_config = DEFAULT_RETRY_CONFIG
+        self.scenario_loader = get_scenario_loader()
 
-    def run_asp_scraper(self, asp_name: str, execution_type: str = "manual", media_id: Optional[str] = None) -> bool:
+    def run_asp_scraper(
+        self,
+        asp_name: str,
+        execution_type: str = "daily",
+        media_id: Optional[str] = None,
+        use_yaml: bool = True,
+    ) -> bool:
         """Run scraper for a specific ASP.
 
         Args:
-            asp_name: Name of the ASP to scrape
-            execution_type: Type of execution ('daily', 'monthly', 'manual')
+            asp_name: Name of the ASP to scrape (e.g., 'afb', 'a8net', or DB name)
+            execution_type: Type of execution ('daily', 'monthly')
             media_id: Media ID to use for this scraper run
+            use_yaml: If True, load scenario from YAML file first
 
         Returns:
             True if successful, False otherwise
         """
-        logger.info(f"Starting scraper for ASP: {asp_name}")
+        logger.info(f"Starting scraper for ASP: {asp_name} (type: {execution_type})")
 
-        # Get ASP scenario from database
-        asp_data = self.supabase.get_asp_scenario(asp_name)
-        if not asp_data:
-            logger.error(f"No scenario found for ASP: {asp_name}")
-            return False
+        scenario = None
+        asp_data = None
 
-        scenario = asp_data.get("prompt")
+        # Try to load from YAML first
+        if use_yaml:
+            # Normalize ASP name for YAML lookup (e.g., "A8.net" -> "a8net")
+            yaml_name = asp_name.lower().replace(".", "").replace(" ", "").replace("（", "").replace("）", "")
+            actions = self.scenario_loader.get_actions(yaml_name, execution_type)
+
+            if actions:
+                import json
+                scenario = json.dumps(actions, ensure_ascii=False)
+                logger.info(f"Loaded {len(actions)} actions from YAML for {yaml_name}/{execution_type}")
+
+                # Load retry config from YAML
+                self.retry_config = self.scenario_loader.get_retry_config(yaml_name)
+                logger.info(f"Using retry config: max_attempts={self.retry_config.get('max_attempts')}")
+
+        # Fall back to database if YAML not found
+        if not scenario:
+            asp_data = self.supabase.get_asp_scenario(asp_name)
+            if not asp_data:
+                logger.error(f"No scenario found for ASP: {asp_name}")
+                return False
+            scenario = asp_data.get("prompt")
+
         if not scenario:
             logger.error(f"No prompt defined for ASP: {asp_name}")
             return False
+
+        # Get ASP data from DB for metadata (even if scenario came from YAML)
+        if not asp_data:
+            # Try to get DB name from YAML scenario
+            yaml_scenario = self.scenario_loader.load_scenario(yaml_name) if use_yaml else None
+            db_asp_name = asp_name
+            if yaml_scenario:
+                db_asp_name = yaml_scenario.get("asp_name_in_db") or yaml_scenario.get("display_name", asp_name)
+                logger.info(f"Using DB ASP name from YAML: {db_asp_name}")
+
+            asp_data = self.supabase.get_asp_scenario(db_asp_name)
+            if not asp_data:
+                logger.warning(f"ASP not found in DB: {db_asp_name}, creating minimal metadata")
+                # Create minimal asp_data for scenarios that don't exist in DB yet
+                asp_data = {
+                    "id": None,
+                    "name": db_asp_name,
+                    "account_item_id": "a6df5fab-2df4-4263-a888-ab63348cccd5",  # Default
+                }
 
         # Store current ASP data and media_id for use in extract and secret resolution
         self.current_asp_data = asp_data
@@ -286,6 +345,58 @@ class AgentLoop:
 
         return steps
 
+    def _execute_command_with_retry(
+        self, command: Dict[str, Any], step_desc: str = ""
+    ) -> bool:
+        """Execute a command with retry logic.
+
+        Args:
+            command: Command dictionary to execute
+            step_desc: Description of the step for logging
+
+        Returns:
+            True if successful, False otherwise
+        """
+        max_attempts = self.retry_config.get("max_attempts", 3)
+        delay_ms = self.retry_config.get("delay_ms", 2000)
+        retry_on = self.retry_config.get("retry_on", ["timeout", "element_not_found"])
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                success = self._execute_command(command)
+                if success:
+                    return True
+
+                # Check if error is retryable
+                error_type = command.get("last_error_type", "unknown")
+                if error_type not in retry_on and attempt < max_attempts:
+                    logger.warning(
+                        f"Error type '{error_type}' not in retry list, failing immediately"
+                    )
+                    return False
+
+            except Exception as e:
+                error_str = str(e).lower()
+                is_retryable = any(
+                    err_type in error_str for err_type in retry_on
+                )
+
+                if not is_retryable:
+                    logger.error(f"Non-retryable error: {e}")
+                    return False
+
+                logger.warning(f"Retryable error on attempt {attempt}: {e}")
+
+            if attempt < max_attempts:
+                logger.info(
+                    f"Retrying {step_desc} (attempt {attempt + 1}/{max_attempts}) "
+                    f"after {delay_ms}ms..."
+                )
+                time.sleep(delay_ms / 1000)
+
+        logger.error(f"All {max_attempts} attempts failed for: {step_desc}")
+        return False
+
     def _execute_command(self, command: Dict[str, Any]) -> bool:
         """Execute a command returned by Gemini.
 
@@ -295,6 +406,8 @@ class AgentLoop:
         Returns:
             True if successful, False otherwise
         """
+        import re  # Import at method level to avoid local variable conflict
+
         action = command.get("action")
 
         if action == "error":
@@ -389,11 +502,35 @@ class AgentLoop:
                 return False
 
         elif action == "wait":
-            duration = int(command.get("value", 2000))
+            duration = int(command.get("milliseconds") or command.get("value", 2000))
             if not self.browser.page:
                 return False
             self.browser.page.wait_for_timeout(duration)
             return True
+
+        elif action == "keyboard":
+            key = command.get("key", "Escape")
+            if not self.browser.page:
+                return False
+            try:
+                self.browser.page.keyboard.press(key)
+                logger.info(f"Pressed keyboard key: {key}")
+                return True
+            except Exception as e:
+                logger.error(f"Keyboard press failed: {e}")
+                return False
+
+        elif action == "screenshot":
+            path = command.get("path", "/tmp/screenshot.png")
+            if not self.browser.page:
+                return False
+            try:
+                self.browser.page.screenshot(path=path, full_page=True)
+                logger.info(f"Screenshot saved to: {path}")
+                return True
+            except Exception as e:
+                logger.error(f"Screenshot failed: {e}")
+                return False
 
         elif action == "hover":
             selector = command.get("selector")
@@ -479,26 +616,172 @@ class AgentLoop:
                     rows = table.locator("tr").all()
                     logger.info(f"  Table has {len(rows)} rows")
 
+                    # Debug: print first few rows of tables with more than 10 rows
+                    if self.debug_mode and len(rows) > 10:
+                        logger.info(f"  DEBUG: Printing first 3 rows of table {table_idx + 1}")
+                        for debug_row_idx in range(min(3, len(rows))):
+                            debug_cells = rows[debug_row_idx].locator("td, th").all()
+                            debug_texts = [c.inner_text().strip()[:30] for c in debug_cells[:8]]
+                            logger.info(f"    Row {debug_row_idx}: {debug_texts}")
+
                     table_records = []
 
-                    # Process each row
+                    # Find header row and column indices
+                    header_row = None
+                    date_col_idx = 0
+                    amount_col_idx = None
+
+                    # For daily data: find the rightmost column with the largest sum (likely total amount)
+                    # For monthly data: use text matching
+                    if target_table == "daily_actuals":
+                        # Strategy: scan data rows and find the column with the largest values
+                        logger.info("  Using heuristic approach for daily data: finding column with largest values")
+
+                        # First, identify header row (contains date-like first cell)
+                        weekday_pattern = r'^[日月火水木金土]$'
+                        has_weekday_only = False
+
+                        for i, row in enumerate(rows):
+                            cells = row.locator("td, th").all()
+                            if len(cells) < 2:
+                                continue
+                            cell_texts = [cell.inner_text().strip() for cell in cells]
+
+                            # Check if first cell looks like a date (YYYY/MM/DD format)
+                            first_cell = cell_texts[0]
+                            if re.match(r'\d{4}[/-]\d{1,2}[/-]\d{1,2}', first_cell):
+                                header_row = i - 1
+                                logger.info(f"  Found data row at index {i}, header should be at {header_row}")
+                                break
+                            # Check if first cell is weekday-only (e.g., 日, 月, 火)
+                            elif re.match(weekday_pattern, first_cell):
+                                has_weekday_only = True
+                                # For afb daily tables, check if column 1 has actual dates
+                                if len(cell_texts) > 1:
+                                    second_cell = cell_texts[1]
+                                    if re.match(r'\d{1,2}[/-]\d{1,2}', second_cell) or re.match(r'\d{4}[/-]\d{1,2}[/-]\d{1,2}', second_cell):
+                                        date_col_idx = 1
+                                        header_row = i - 1
+                                        logger.info(f"  Found weekday pattern in col 0, using col 1 for dates. Header at {header_row}")
+                                        break
+
+                        if header_row is None or header_row < 0:
+                            header_row = 1  # Default assumption
+                            logger.info(f"  Using default header_row: {header_row}")
+
+                        # Scan a few data rows to find which column has the largest numeric values
+                        column_sums = {}
+                        sample_rows = min(5, len(rows) - header_row - 1)
+
+                        for row_idx in range(header_row + 1, header_row + 1 + sample_rows):
+                            if row_idx >= len(rows):
+                                break
+
+                            row = rows[row_idx]
+                            cells = row.locator("td, th").all()
+                            cell_texts = [cell.inner_text().strip() for cell in cells]
+
+                            # Try to parse each column as a number
+                            for col_idx in range(1, len(cell_texts)):  # Skip column 0 (date)
+                                try:
+                                    # Remove common separators and currency symbols
+                                    value_str = re.sub(r'[¥,円$]', '', cell_texts[col_idx])
+                                    value = int(value_str)
+
+                                    if col_idx not in column_sums:
+                                        column_sums[col_idx] = 0
+                                    column_sums[col_idx] += value
+                                except:
+                                    pass
+
+                        # Find the column with the largest sum
+                        if column_sums:
+                            amount_col_idx = max(column_sums, key=column_sums.get)
+                            logger.info(f"  Detected amount column at index {amount_col_idx} (largest sum: {column_sums[amount_col_idx]})")
+                            logger.info(f"  All column sums: {column_sums}")
+                        else:
+                            logger.warning("  Could not detect amount column by value analysis")
+                            amount_col_idx = None
+
+                    else:
+                        # For monthly data, use text matching as before
+                        for i, row in enumerate(rows):
+                            cells = row.locator("td, th").all()
+                            if len(cells) < 2:
+                                continue
+
+                            cell_texts = [cell.inner_text().strip() for cell in cells]
+
+                            # Check if this is a header row
+                            found_header = False
+                            for col_idx, text in enumerate(cell_texts):
+                                # Normalize text (remove spaces and newlines)
+                                normalized_text = text.replace(" ", "").replace("\n", "").replace("　", "")
+
+                                # For monthly data, look for various amount column patterns
+                                # Priority 1: A8.net pattern "確定報酬額・税込"
+                                if "税込" in text and "確定報酬額" in text:
+                                    header_row = i
+                                    amount_col_idx = col_idx
+                                    logger.info(f"  Found amount column at index {amount_col_idx}: {text}")
+                                    found_header = True
+                                    break
+                                # Priority 2: afb pattern "発生報酬" or "発生 報酬"
+                                elif "発生報酬" in normalized_text:
+                                    header_row = i
+                                    amount_col_idx = col_idx
+                                    logger.info(f"  Found amount column (afb pattern) at index {amount_col_idx}: {text}")
+                                    found_header = True
+                                    break
+
+                            if found_header:
+                                break
+
+                            # Fallback: if no specific column found, look for any amount-related column
+                            if header_row is None:
+                                for col_idx, text in enumerate(cell_texts):
+                                    normalized_text = text.replace(" ", "").replace("\n", "").replace("　", "")
+
+                                    # Check various patterns
+                                    if any(pattern in normalized_text for pattern in ["確定報酬額", "税込", "発生報酬", "承認報酬"]):
+                                        header_row = i
+                                        amount_col_idx = col_idx
+                                        logger.info(f"  Found fallback amount column at index {amount_col_idx}: {text}")
+                                        found_header = True
+                                        break
+
+                            if found_header:
+                                break
+
+                    if amount_col_idx is None:
+                        logger.warning("  Could not find amount column in table")
+                        continue
+
+                    # Process data rows
                     for i, row in enumerate(rows):
+                        if i <= header_row:
+                            # Skip header rows
+                            continue
+
                         try:
                             # Get all cells (th or td)
                             cells = row.locator("td, th").all()
 
                             if len(cells) < 2:
-                                # Skip header rows or incomplete rows
                                 continue
 
                             # Extract text from cells
                             cell_texts = [cell.inner_text().strip() for cell in cells]
 
+                            if len(cell_texts) <= amount_col_idx:
+                                # Not enough columns
+                                continue
+
                             # Parse date and amount based on target table
                             if target_table == "daily_actuals":
-                                # Daily data: expect date in first column, amount in second
-                                date_str = cell_texts[0]
-                                amount_str = cell_texts[1]
+                                # Daily data: first column is date
+                                date_str = cell_texts[date_col_idx]
+                                amount_str = cell_texts[amount_col_idx]
 
                                 # Parse date (format: YYYY/MM/DD or YYYY-MM-DD)
                                 parsed_date = self._parse_date(date_str)
@@ -513,10 +796,11 @@ class AgentLoop:
                                     "amount": amount
                                 }
 
-                            elif target_table == "monthly_actuals":
-                                # Monthly data: expect year-month in first column, amount in second
-                                period_str = cell_texts[0]
-                                amount_str = cell_texts[1]
+                            elif target_table in ["monthly_actuals", "actuals"]:
+                                # Monthly data: first column is year-month
+                                # Support both "monthly_actuals" and "actuals" for backward compatibility
+                                period_str = cell_texts[date_col_idx]
+                                amount_str = cell_texts[amount_col_idx]
 
                                 # Parse period (format: YYYY/MM or YYYY-MM)
                                 parsed_period = self._parse_period(period_str)
@@ -567,7 +851,8 @@ class AgentLoop:
                 actual_table = "actuals" if target_table == "monthly_actuals" else target_table
 
                 # Save extracted data
-                if target_table in ["daily_actuals", "monthly_actuals"]:
+                # Support "actuals", "monthly_actuals", and "daily_actuals"
+                if target_table in ["daily_actuals", "monthly_actuals", "actuals"]:
                     # Convert to JSON string format expected by _save_extracted_data
                     import json
                     extracted_data = json.dumps(extracted_records, ensure_ascii=False)

@@ -20,6 +20,9 @@ class Settings:
     google_api_key: str
     gemini_model: str
 
+    # Anthropic Claude API
+    anthropic_api_key: str
+
     # Execution
     headless: bool
     log_level: str
@@ -34,6 +37,8 @@ class Settings:
             # Gemini API
             google_api_key=os.getenv("GOOGLE_API_KEY", ""),
             gemini_model=os.getenv("GEMINI_MODEL", "gemini-1.5-flash"),
+            # Anthropic API
+            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", ""),
             # Execution
             headless=os.getenv("HEADLESS", "true").lower() == "true",
             log_level=os.getenv("LOG_LEVEL", "INFO"),
@@ -44,7 +49,7 @@ class Settings:
         required_fields = [
             ("SUPABASE_URL", self.supabase_url),
             ("SUPABASE_SERVICE_ROLE_KEY", self.supabase_service_role_key),
-            ("GOOGLE_API_KEY", self.google_api_key),
+            ("ANTHROPIC_API_KEY", self.anthropic_api_key),
         ]
 
         missing = [name for name, value in required_fields if not value]

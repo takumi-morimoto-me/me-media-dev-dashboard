@@ -3,7 +3,12 @@
 import logging
 import sys
 import argparse
+import os
 from datetime import datetime, timedelta
+
+# Add parent directory to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from config import Settings
 from core import SupabaseClient, BrowserController, GeminiClient, AgentLoop, Notifier
 
