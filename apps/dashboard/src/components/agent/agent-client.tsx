@@ -2,7 +2,7 @@
 
 import { useMemo, useTransition, useState } from "react";
 import { toast } from "sonner";
-import { deleteAsp, bulkDeleteAsps } from "@/actions/asp-actions";
+import { deleteAsp, bulkDeleteAsps, updateAsp } from "@/actions/asp-actions";
 import { useAgentContext } from "@/components/layout/dashboard-client-layout";
 import { CsvImportClient } from "@/components/agent/csv-import-client";
 import { AspsTable } from "@/components/agent/asps-table";
@@ -151,9 +151,20 @@ export function AgentClient() {
                 })),
               }}
               onSubmit={async (values) => {
-                // TODO: updateAsp実装
-                console.log("Update ASP:", values);
-                setEditingAsp(null);
+                startTransition(async () => {
+                  const result = await updateAsp(editingAsp.id, {
+                    name: values.name,
+                    login_url: values.login_url,
+                    prompt: values.prompt,
+                  });
+
+                  if (result.error) {
+                    toast.error(result.error);
+                  } else {
+                    toast.success("ASPを更新しました");
+                    setEditingAsp(null);
+                  }
+                });
               }}
               isPending={isPending}
             />

@@ -156,8 +156,20 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
     const fiscalEndDate = new Date(selectedYear + 1, fiscalYearStartMonth - 1, 0);
 
     if (displayUnit === 'monthly') {
-      const months = Array.from({ length: 12 }, (_, i) => ((i + fiscalYearStartMonth - 1) % 12) + 1);
-      months.forEach(m => headers.push({ key: `m-${m}`, label: `${m}月` }));
+      // Show 3 fiscal years: previous, current, and next (36 months total)
+      const years = [selectedYear - 1, selectedYear, selectedYear + 1];
+      years.forEach(year => {
+        const months = Array.from({ length: 12 }, (_, i) => ((i + fiscalYearStartMonth - 1) % 12) + 1);
+        months.forEach((m) => {
+          // Calculate actual year for this month
+          const actualYear = m >= fiscalYearStartMonth ? year : year + 1;
+          headers.push({
+            key: `m-${actualYear}-${m}`,
+            label: `${m}月`,
+            // Store year info for grouping
+          });
+        });
+      });
 
       // Group monthly data by account item
       const monthlyByItemId = monthlyData.reduce((acc, data) => {
@@ -173,8 +185,10 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
         const relevantData = [...selfData, ...childrenData];
 
         headers.forEach(h => {
-          const month = parseInt(h.key.split('-')[1]);
-          const monthData = relevantData.filter(d => d.item_month === month);
+          const [, yearStr, monthStr] = h.key.split('-');
+          const year = parseInt(yearStr);
+          const month = parseInt(monthStr);
+          const monthData = relevantData.filter(d => d.item_month === month && d.item_year === year);
           aggregatedData[item.id][h.key] = {
             budget: monthData.reduce((sum, d) => sum + d.budget, 0),
             actual: monthData.reduce((sum, d) => sum + d.actual, 0),
@@ -245,9 +259,11 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
   }, [monthlyData, dailyData, accountItems, displayUnit, fiscalYearStartMonth, selectedYear]);
 
   const aspTableData = useMemo(() => {
-    // Extract unique ASPs
+    // Extract unique ASPs (excluding "日次" suffix ASPs)
     const aspMap = new Map<string, { asp_id: string; asp_name: string }>();
     [...aspMonthlyData, ...aspDailyData].forEach(item => {
+      // Skip ASPs with "日次" in their name (these are duplicates)
+      if (item.asp_name.includes('日次')) return;
       if (!aspMap.has(item.asp_id)) {
         aspMap.set(item.asp_id, { asp_id: item.asp_id, asp_name: item.asp_name });
       }
@@ -261,14 +277,26 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
     const fiscalEndDate = new Date(selectedYear + 1, fiscalYearStartMonth - 1, 0);
 
     if (displayUnit === 'monthly') {
-      const months = Array.from({ length: 12 }, (_, i) => ((i + fiscalYearStartMonth - 1) % 12) + 1);
-      months.forEach(m => headers.push({ key: `m-${m}`, label: `${m}月` }));
+      // Show 3 fiscal years: previous, current, and next (36 months total)
+      const years = [selectedYear - 1, selectedYear, selectedYear + 1];
+      years.forEach(year => {
+        const months = Array.from({ length: 12 }, (_, i) => ((i + fiscalYearStartMonth - 1) % 12) + 1);
+        months.forEach((m) => {
+          const actualYear = m >= fiscalYearStartMonth ? year : year + 1;
+          headers.push({
+            key: `m-${actualYear}-${m}`,
+            label: `${m}月`,
+          });
+        });
+      });
 
       rows.forEach(asp => {
         aggregatedData[asp.asp_id] = {};
         headers.forEach(h => {
-          const month = parseInt(h.key.split('-')[1]);
-          const monthData = aspMonthlyData.filter(d => d.asp_id === asp.asp_id && d.item_month === month);
+          const [, yearStr, monthStr] = h.key.split('-');
+          const year = parseInt(yearStr);
+          const month = parseInt(monthStr);
+          const monthData = aspMonthlyData.filter(d => d.asp_id === asp.asp_id && d.item_month === month && d.item_year === year);
           aggregatedData[asp.asp_id][h.key] = monthData.reduce((sum, d) => sum + d.actual, 0);
         });
       });
@@ -330,10 +358,19 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
   // Scroll to current month on mount or when displayUnit changes
   useEffect(() => {
     if (tableContainerRef.current && displayUnit === 'monthly') {
-      const currentMonth = new Date().getMonth() + 1; // 1-12
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1; // 1-12
+
+      // Find the index of the current year-month in headers
       const monthIndex = tableData.headers.findIndex(h => {
-        const month = parseInt(h.key.split('-')[1]);
-        return month === currentMonth;
+        const parts = h.key.split('-');
+        if (parts.length === 3) {
+          const year = parseInt(parts[1]);
+          const month = parseInt(parts[2]);
+          return year === currentYear && month === currentMonth;
+        }
+        return false;
       });
 
       if (monthIndex !== -1) {
@@ -346,10 +383,10 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
           const scrollableDiv = tableContainer.querySelector('.overflow-x-auto') as HTMLDivElement;
           if (!scrollableDiv) return;
 
-          // Calculate scroll position
-          // Each column is approximately 100px min-width + padding
+          // Calculate scroll position - center the current month
           const columnWidth = 120; // Approximate width per column
-          const scrollPosition = Math.max(0, (monthIndex - 1) * columnWidth);
+          const containerWidth = scrollableDiv.clientWidth;
+          const scrollPosition = Math.max(0, (monthIndex * columnWidth) - (containerWidth / 2) + (columnWidth / 2));
 
           scrollableDiv.scrollLeft = scrollPosition;
         }, 100);
