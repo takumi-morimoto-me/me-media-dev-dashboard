@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import FinancialsTable from "@/components/financials/financials-table";
 import AspFinancialsTable from "@/components/financials/asp-financials-table";
@@ -98,7 +98,7 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
   const mediaId = searchParams.get('media') || 'all';
   const currentYear = parseInt(searchParams.get('year') || new Date().getFullYear().toString());
   const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [viewMode, setViewMode] = useState<ViewMode>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('actual');
 
   const currentYearNum = new Date().getFullYear();
   const yearOptions = Array.from({ length: 11 }, (_, i) => currentYearNum - 5 + i);
@@ -156,20 +156,20 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
     const fiscalEndDate = new Date(selectedYear + 1, fiscalYearStartMonth - 1, 0);
 
     if (displayUnit === 'monthly') {
-      // Show 3 fiscal years: previous, current, and next (36 months total)
-      const years = [selectedYear - 1, selectedYear, selectedYear + 1];
-      years.forEach(year => {
-        const months = Array.from({ length: 12 }, (_, i) => ((i + fiscalYearStartMonth - 1) % 12) + 1);
-        months.forEach((m) => {
-          // Calculate actual year for this month
-          const actualYear = m >= fiscalYearStartMonth ? year : year + 1;
-          headers.push({
-            key: `m-${actualYear}-${m}`,
-            label: `${m}月`,
-            // Store year info for grouping
-          });
+      // Generate 12 months for the selected fiscal year
+      for (let i = 0; i < 12; i++) {
+        let month = fiscalYearStartMonth + i;
+        let year = selectedYear;
+        if (month > 12) {
+          month -= 12;
+          year += 1;
+        }
+        const yearPrefix = String(year).slice(-2);
+        headers.push({
+          key: `m-${year}-${month}`,
+          label: `${yearPrefix}/${month}月`,
         });
-      });
+      }
 
       // Group monthly data by account item
       const monthlyByItemId = monthlyData.reduce((acc, data) => {
@@ -277,18 +277,20 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
     const fiscalEndDate = new Date(selectedYear + 1, fiscalYearStartMonth - 1, 0);
 
     if (displayUnit === 'monthly') {
-      // Show 3 fiscal years: previous, current, and next (36 months total)
-      const years = [selectedYear - 1, selectedYear, selectedYear + 1];
-      years.forEach(year => {
-        const months = Array.from({ length: 12 }, (_, i) => ((i + fiscalYearStartMonth - 1) % 12) + 1);
-        months.forEach((m) => {
-          const actualYear = m >= fiscalYearStartMonth ? year : year + 1;
-          headers.push({
-            key: `m-${actualYear}-${m}`,
-            label: `${m}月`,
-          });
+      // Generate 12 months for the selected fiscal year
+      for (let i = 0; i < 12; i++) {
+        let month = fiscalYearStartMonth + i;
+        let year = selectedYear;
+        if (month > 12) {
+          month -= 12;
+          year += 1;
+        }
+        const yearPrefix = String(year).slice(-2);
+        headers.push({
+          key: `m-${year}-${month}`,
+          label: `${yearPrefix}/${month}月`,
         });
-      });
+      }
 
       rows.forEach(asp => {
         aggregatedData[asp.asp_id] = {};
@@ -355,44 +357,7 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
     return { headers, rows, data: aggregatedData };
   }, [aspMonthlyData, aspDailyData, displayUnit, fiscalYearStartMonth, selectedYear]);
 
-  // Scroll to current month on mount or when displayUnit changes
-  useEffect(() => {
-    if (tableContainerRef.current && displayUnit === 'monthly') {
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth() + 1; // 1-12
 
-      // Find the index of the current year-month in headers
-      const monthIndex = tableData.headers.findIndex(h => {
-        const parts = h.key.split('-');
-        if (parts.length === 3) {
-          const year = parseInt(parts[1]);
-          const month = parseInt(parts[2]);
-          return year === currentYear && month === currentMonth;
-        }
-        return false;
-      });
-
-      if (monthIndex !== -1) {
-        // Wait for the table to render
-        setTimeout(() => {
-          const tableContainer = tableContainerRef.current;
-          if (!tableContainer) return;
-
-          // Find the scrollable container (the div with overflow-x-auto)
-          const scrollableDiv = tableContainer.querySelector('.overflow-x-auto') as HTMLDivElement;
-          if (!scrollableDiv) return;
-
-          // Calculate scroll position - center the current month
-          const columnWidth = 120; // Approximate width per column
-          const containerWidth = scrollableDiv.clientWidth;
-          const scrollPosition = Math.max(0, (monthIndex * columnWidth) - (containerWidth / 2) + (columnWidth / 2));
-
-          scrollableDiv.scrollLeft = scrollPosition;
-        }, 100);
-      }
-    }
-  }, [displayUnit, tableData.headers]);
 
   const activeFiltersCount = (selectedYear !== currentYearNum ? 1 : 0) + (viewMode !== 'all' ? 1 : 0);
 
