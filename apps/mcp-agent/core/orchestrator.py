@@ -558,26 +558,19 @@ class AgentLoop:
                     selector = f"text={selector}"
                     logger.info(f"Added text= prefix: {selector}")
 
-                try:
-                    self.browser.page.hover(selector, timeout=10000)
-                    logger.info(f"Hovered over {selector}")
-                    return True
-                except Exception as first_error:
-                    # Try fallback: extract text from step description
-                    logger.warning(f"First hover attempt failed, trying text-based fallback: {first_error}")
-                    step_text = step  # Use the original step description
-
-                    # Extract text in quotes from step (e.g., 「レポート」)
-                    text_match = re.search(r'「(.+?)」', step_text)
-                    if text_match:
-                        fallback_text = text_match.group(1)
-                        fallback_selector = f"text={fallback_text}"
-                        logger.info(f"Trying fallback selector: {fallback_selector}")
-                        self.browser.page.hover(fallback_selector, timeout=10000)
-                        logger.info(f"Hovered over {fallback_selector} (fallback)")
+                # Try multiple selectors if comma-separated
+                selectors = [s.strip() for s in selector.split(',')]
+                for sel in selectors:
+                    try:
+                        self.browser.page.hover(sel, timeout=5000)
+                        logger.info(f"Hovered over {sel}")
                         return True
-                    else:
-                        raise first_error
+                    except Exception as e:
+                        logger.warning(f"Hover failed for {sel}: {e}")
+                        continue
+
+                # All selectors failed
+                raise Exception(f"All hover selectors failed: {selectors}")
             except Exception as e:
                 logger.error(f"Hover failed: {e}")
                 return False
@@ -983,6 +976,115 @@ class AgentLoop:
 
             except Exception as e:
                 logger.error(f"Extract failed: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+                command["records_saved"] = 0
+                return False
+
+        elif action == "download":
+            selector = command.get("selector")
+            download_path = command.get("path", "/tmp/download.csv")
+            if not self.browser.page:
+                return False
+            try:
+                # Set up download handler
+                with self.browser.page.expect_download() as download_info:
+                    # Click the download button
+                    self.browser.page.locator(selector).first.click()
+
+                download = download_info.value
+                # Save to the specified path
+                download.save_as(download_path)
+                logger.info(f"Downloaded file to: {download_path}")
+                return True
+            except Exception as e:
+                logger.error(f"Download failed: {e}")
+                return False
+
+        elif action == "extract_csv":
+            csv_path = command.get("path", "/tmp/download.csv")
+            target_table = command.get("target", "daily_actuals")
+            date_column = command.get("date_column", "日付")
+            amount_column = command.get("amount_column", "確定報酬金額(税抜)")
+
+            try:
+                import csv
+
+                # Try different encodings
+                encodings = ['utf-8', 'shift_jis', 'cp932', 'utf-8-sig']
+                rows = None
+
+                for encoding in encodings:
+                    try:
+                        with open(csv_path, 'r', encoding=encoding) as f:
+                            reader = csv.DictReader(f)
+                            rows = list(reader)
+                            logger.info(f"Successfully read CSV with encoding: {encoding}")
+                            break
+                    except UnicodeDecodeError:
+                        continue
+
+                if not rows:
+                    logger.error(f"Could not read CSV file with any encoding: {csv_path}")
+                    return False
+
+                logger.info(f"CSV has {len(rows)} rows, columns: {rows[0].keys() if rows else 'none'}")
+
+                extracted_records = []
+                for row in rows:
+                    # Get date
+                    date_str = row.get(date_column, "")
+                    if not date_str:
+                        # Try to find a column containing the date pattern
+                        for key, val in row.items():
+                            if re.match(r'\d{4}[/-]\d{1,2}[/-]\d{1,2}', str(val)):
+                                date_str = val
+                                break
+
+                    parsed_date = self._parse_date(date_str)
+                    if not parsed_date:
+                        continue
+
+                    # Get amount
+                    amount_str = row.get(amount_column, "")
+                    if not amount_str:
+                        # Try to find amount column by pattern
+                        for key, val in row.items():
+                            if "報酬" in key or "金額" in key:
+                                amount_str = val
+                                break
+
+                    amount = self._parse_amount(str(amount_str))
+
+                    extracted_records.append({
+                        "date": parsed_date,
+                        "amount": amount
+                    })
+                    logger.info(f"Extracted CSV record: {parsed_date} -> {amount}")
+
+                if not extracted_records:
+                    logger.warning("No records extracted from CSV")
+                    return False
+
+                logger.info(f"Successfully extracted {len(extracted_records)} records from CSV")
+
+                # Add metadata
+                if self.current_asp_data:
+                    command["media_id"] = self.current_media_id
+                    command["account_item_id"] = self.current_asp_data.get(
+                        "account_item_id", "a6df5fab-2df4-4263-a888-ab63348cccd5"
+                    )
+                    command["asp_id"] = self.current_asp_data.get("id")
+
+                # Save extracted data
+                import json
+                extracted_data = json.dumps(extracted_records, ensure_ascii=False)
+                saved_count = self._save_extracted_data(extracted_data, target_table, command)
+                command["records_saved"] = saved_count
+                return saved_count > 0
+
+            except Exception as e:
+                logger.error(f"Extract CSV failed: {e}")
                 import traceback
                 logger.error(traceback.format_exc())
                 command["records_saved"] = 0
