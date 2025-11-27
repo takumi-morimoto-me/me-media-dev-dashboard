@@ -29,6 +29,7 @@ import {
   DEFAULT_COLUMN_SIZES,
   MIN_COLUMN_WIDTH,
   CHECKBOX_WIDTH,
+  STATUS_WIDTH,
   STORAGE_KEY_COLUMN_SIZES,
 } from "./constants"
 
@@ -58,17 +59,18 @@ export function AspsTable({
   const [columnSizing, setColumnSizing] = useState(DEFAULT_COLUMN_SIZES)
   const [columnResizeMode] = useState<ColumnResizeMode>("onChange")
 
-  // LocalStorageからカラム幅を復元（チェックボックスは常に固定）
+  // LocalStorageからカラム幅を復元（チェックボックスとステータスは常に固定）
   useEffect(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(STORAGE_KEY_COLUMN_SIZES)
       if (saved) {
         try {
           const parsed = JSON.parse(saved)
-          // selectカラムの幅は常にCHECKBOX_WIDTHに固定
+          // selectとstatusカラムの幅は常に固定
           setColumnSizing({
             ...parsed,
             select: CHECKBOX_WIDTH,
+            status: STATUS_WIDTH,
           })
         } catch (e) {
           console.error("Failed to parse column sizes", e)
@@ -77,12 +79,13 @@ export function AspsTable({
     }
   }, [])
 
-  // カラム幅の変更をLocalStorageに保存（チェックボックスは常に固定）
+  // カラム幅の変更をLocalStorageに保存（チェックボックスとステータスは常に固定）
   useEffect(() => {
     if (typeof window !== "undefined") {
       const sizingToSave = {
         ...columnSizing,
-        select: CHECKBOX_WIDTH, // selectカラムの幅は常にCHECKBOX_WIDTHに固定
+        select: CHECKBOX_WIDTH,
+        status: STATUS_WIDTH,
       }
       localStorage.setItem(STORAGE_KEY_COLUMN_SIZES, JSON.stringify(sizingToSave))
     }
@@ -175,41 +178,46 @@ export function AspsTable({
           >
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="hover:bg-transparent">
-                  {headerGroup.headers.map((header) => (
-                    <TableHead
-                      key={header.id}
-                      style={{
-                        width: header.getSize(),
-                        position: "relative",
-                      }}
-                      className="font-medium text-xs border-r overflow-hidden"
-                    >
-                      <div className="truncate">
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </div>
-                      {/* リサイザー */}
-                      {header.column.getCanResize() && (
-                        <div
-                          onMouseDown={header.getResizeHandler()}
-                          onTouchStart={header.getResizeHandler()}
-                          className={`absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none bg-transparent hover:bg-blue-500 ${
-                            header.column.getIsResizing() ? "bg-blue-500" : ""
-                          }`}
-                          style={{
-                            transform: header.column.getIsResizing()
-                              ? "translateX(1px)"
-                              : "",
-                          }}
-                        />
-                      )}
-                    </TableHead>
-                  ))}
+                <TableRow key={headerGroup.id} className="hover:bg-transparent h-10">
+                  {headerGroup.headers.map((header) => {
+                    const isCheckbox = header.column.id === "select"
+                    return (
+                      <TableHead
+                        key={header.id}
+                        style={{
+                          width: header.getSize(),
+                          minWidth: header.getSize(),
+                          maxWidth: header.column.columnDef.maxSize,
+                          position: "relative",
+                        }}
+                        className={`font-medium text-xs border-r overflow-hidden ${isCheckbox ? "p-0" : ""}`}
+                      >
+                        <div className={isCheckbox ? "flex items-center justify-center h-full" : "truncate"}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </div>
+                        {/* リサイザー */}
+                        {header.column.getCanResize() && (
+                          <div
+                            onMouseDown={header.getResizeHandler()}
+                            onTouchStart={header.getResizeHandler()}
+                            className={`absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none bg-transparent hover:bg-blue-500 ${
+                              header.column.getIsResizing() ? "bg-blue-500" : ""
+                            }`}
+                            style={{
+                              transform: header.column.getIsResizing()
+                                ? "translateX(1px)"
+                                : "",
+                            }}
+                          />
+                        )}
+                      </TableHead>
+                    )
+                  })}
                   <TableHead className="w-10 min-w-10 p-0">
                     <Button
                       variant="ghost"
@@ -228,25 +236,29 @@ export function AspsTable({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="hover:bg-muted/50"
+                  className="hover:bg-muted/50 h-10"
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      style={{
-                        width: cell.column.getSize(),
-                        maxWidth: cell.column.getSize(),
-                      }}
-                      className="py-3 border-r overflow-hidden"
-                    >
-                      <div className="truncate">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </div>
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const isCheckbox = cell.column.id === "select"
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        style={{
+                          width: cell.column.getSize(),
+                          minWidth: cell.column.getSize(),
+                          maxWidth: cell.column.columnDef.maxSize || cell.column.getSize(),
+                        }}
+                        className={`border-r overflow-hidden ${isCheckbox ? "p-0" : "py-2"}`}
+                      >
+                        <div className={isCheckbox ? "flex items-center justify-center h-full" : "truncate text-xs font-semibold"}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </div>
+                      </TableCell>
+                    )
+                  })}
                   <TableCell className="w-10 min-w-10 p-0" />
                 </TableRow>
               ))}

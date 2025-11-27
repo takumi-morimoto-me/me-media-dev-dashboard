@@ -8,14 +8,17 @@ export const NAME_MIN_WIDTH = w(80)   // 320px
 export const PROMPT_MIN_WIDTH = w(40) // 160px
 
 // カラム幅の初期値
+export const STATUS_WIDTH = w(20)     // 80px
+
 export const DEFAULT_COLUMN_SIZES: Record<string, number> = {
   select: CHECKBOX_WIDTH,
-  name: w(80),              // 320px
-  media: w(40),             // 160px
-  loginUrl: w(40),          // 160px
-  username: w(40),          // 160px
-  password: w(40),          // 160px
-  prompt: w(40),            // 160px
+  status: STATUS_WIDTH,       // 80px
+  name: w(80),                // 320px
+  media: w(40),               // 160px
+  loginUrl: w(40),            // 160px
+  username: w(40),            // 160px
+  password: w(40),            // 160px
+  prompt: w(40),              // 160px
 }
 
 // localStorage keys
