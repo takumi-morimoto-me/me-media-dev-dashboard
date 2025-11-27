@@ -1,7 +1,7 @@
 # affitown (アフィタウン) シナリオ定義
 name: affitown
 display_name: "アフィタウン"
-asp_name_in_db: "アフィタウン"
+asp_name_in_db: "affitown(SIM通信・おいくら・高マガ・SIMチェンジ・ビギ）"
 login_url: https://affitown.jp/
 
 credentials:
@@ -39,10 +39,11 @@ monthly:
     # スクリーンショットを撮る
     - action: screenshot
       path: "/tmp/affitown_report.png"
-    # データ抽出
+    # データ抽出（横型テーブル）
     - action: extract
       selector: "table"
       target: actuals
+      horizontal: true
 
 # 日次データ取得シナリオ
 daily:
