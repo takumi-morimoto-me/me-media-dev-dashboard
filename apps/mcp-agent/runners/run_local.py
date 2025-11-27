@@ -64,6 +64,9 @@ def main():
         elif args.media.lower() in ["saiyasu", "最安修理", "saiyasusyuuri"]:
             media_id = "57d62304-0ccd-4255-a128-5250e1469171"  # 最安修理
             logger.info("Using 最安修理 media")
+        elif args.media.lower() in ["beginners", "ビギナーズ"]:
+            media_id = "4d3d6a03-3cf2-41b9-a23c-4b2d75bafa12"  # ReRe (temporary - ビギナーズ uses same)
+            logger.info("Using ReRe media for ビギナーズ")
         else:
             # Assume it's already a UUID
             media_id = args.media
