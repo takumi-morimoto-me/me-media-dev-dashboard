@@ -1,0 +1,128 @@
+# Felmat シナリオ定義
+name: felmat
+display_name: "felmat"
+asp_name_in_db: "felmat"
+login_url: https://www.felmat.net/publisher/login
+
+credentials:
+  username_key: FELMAT_USERNAME
+  password_key: FELMAT_PASSWORD
+
+# 月次データ取得シナリオ
+monthly:
+  description: "月別レポートから報酬合計（税込）を取得"
+  actions:
+    - action: navigate
+      value: https://www.felmat.net/publisher/login
+    - action: wait
+      milliseconds: 3000
+    # ログインフォーム入力
+    - action: fill
+      selector: "input[name='login_id'], input[type='text']:first-of-type, input#login_id"
+      value: "{SECRET:FELMAT_USERNAME}"
+    - action: fill
+      selector: "input[name='password'], input[type='password']"
+      value: "{SECRET:FELMAT_PASSWORD}"
+    - action: click
+      selector: "button[type='submit'], input[type='submit'], button:has-text('LOG IN'), button:has-text('ログイン')"
+      no_wait_after: true
+      timeout: 30000
+    - action: wait
+      milliseconds: 8000
+    # レポートメニューにホバー
+    - action: hover
+      selector: "a:has-text('レポート'), span:has-text('レポート')"
+    - action: wait
+      milliseconds: 1000
+    # 月別をクリック
+    - action: click
+      selector: "a:has-text('月別')"
+    - action: wait
+      milliseconds: 3000
+    # 期間設定: 2025年1月から
+    - action: select
+      selector: "select:has(option[value='2024']):first-of-type"
+      value: "2025"
+    - action: wait
+      milliseconds: 500
+    - action: select
+      selector: "select:has(option[value='1']):nth-of-type(2)"
+      value: "1"
+    - action: wait
+      milliseconds: 500
+    # 検索ボタンをクリック
+    - action: click
+      selector: "button:has-text('上記条件で一覧を抽出'), input[type='submit']:has-text('抽出')"
+    - action: wait
+      milliseconds: 5000
+    # スクリーンショットを撮る
+    - action: screenshot
+      path: "/tmp/felmat_monthly.png"
+    # テーブルからデータ抽出（報酬合計（税込）カラムを指定）
+    - action: extract
+      selector: "table"
+      target: actuals
+      amount_column_pattern: "税込"
+      columns:
+        - name: month
+          selector: "td:nth-child(1)"
+        - name: amount
+          selector: "td:last-child"
+
+# 日次データ取得シナリオ
+daily:
+  description: "日別レポートから報酬合計（税抜）を取得"
+  actions:
+    - action: navigate
+      value: https://www.felmat.net/publisher/login
+    - action: wait
+      milliseconds: 3000
+    # ログインフォーム入力
+    - action: fill
+      selector: "input[name='login_id'], input[type='text']:first-of-type, input#login_id"
+      value: "{SECRET:FELMAT_USERNAME}"
+    - action: fill
+      selector: "input[name='password'], input[type='password']"
+      value: "{SECRET:FELMAT_PASSWORD}"
+    - action: click
+      selector: "button[type='submit'], input[type='submit'], button:has-text('LOG IN'), button:has-text('ログイン')"
+      no_wait_after: true
+      timeout: 30000
+    - action: wait
+      milliseconds: 8000
+    # レポートメニューにホバー
+    - action: hover
+      selector: "a:has-text('レポート'), span:has-text('レポート')"
+    - action: wait
+      milliseconds: 1000
+    # 日別をクリック
+    - action: click
+      selector: "a:has-text('日別')"
+    - action: wait
+      milliseconds: 3000
+    # 検索ボタンをクリック（デフォルトで今月が選択されている）
+    - action: click
+      selector: "button:has-text('上記条件で一覧を抽出'), input[type='submit']:has-text('抽出')"
+    - action: wait
+      milliseconds: 5000
+    # スクリーンショットを撮る
+    - action: screenshot
+      path: "/tmp/felmat_daily.png"
+    # テーブルからデータ抽出（報酬合計（税抜）カラムを指定）
+    - action: extract
+      selector: "table"
+      target: daily_actuals
+      amount_column_pattern: "税抜"
+      columns:
+        - name: date
+          selector: "td:nth-child(1)"
+        - name: amount
+          selector: "td:last-child"
+
+# リトライ設定
+retry:
+  max_attempts: 3
+  delay_ms: 2000
+  retry_on:
+    - timeout
+    - element_not_found
