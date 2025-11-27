@@ -422,6 +422,8 @@ class AgentLoop:
 
         elif action == "click":
             selector = command.get("selector")
+            no_wait_after = command.get("no_wait_after", False)
+            click_timeout = command.get("timeout", 10000)
             if not self.browser.page:
                 return False
             try:
@@ -447,21 +449,26 @@ class AgentLoop:
                     logger.info(f"Added text= prefix: {selector}")
 
                 # Use click() directly like TypeScript version
+                click_opts = {"timeout": click_timeout}
+                if no_wait_after:
+                    click_opts["no_wait_after"] = True
+
                 try:
                     # First try clicking with default behavior (visible element)
-                    self.browser.page.locator(selector).first.click(timeout=10000)
+                    self.browser.page.locator(selector).first.click(**click_opts)
                     logger.info(f"Clicked {selector}")
                 except Exception as e:
                     # If click failed due to visibility, try the last matching element (often the visible one)
                     if "not visible" in str(e).lower() or "timeout" in str(e).lower():
                         logger.warning(f"First element not visible, trying last element: {e}")
                         try:
-                            self.browser.page.locator(selector).last.click(timeout=10000)
+                            self.browser.page.locator(selector).last.click(**click_opts)
                             logger.info(f"Clicked last {selector}")
                         except Exception as e2:
                             # Final fallback: force click the first element
                             logger.warning(f"Last element also failed, force clicking first: {e2}")
-                            self.browser.page.locator(selector).first.click(timeout=10000, force=True)
+                            click_opts["force"] = True
+                            self.browser.page.locator(selector).first.click(**click_opts)
                             logger.info(f"Force clicked {selector}")
                     else:
                         raise
@@ -590,10 +597,25 @@ class AgentLoop:
                 logger.error(f"Scroll failed: {e}")
                 return False
 
+        elif action == "select":
+            selector = command.get("selector")
+            value = command.get("value", "")
+            if not self.browser.page:
+                return False
+            try:
+                self.browser.page.select_option(selector, value=value)
+                logger.info(f"Selected '{value}' in {selector}")
+                return True
+            except Exception as e:
+                logger.error(f"Select failed: {e}")
+                return False
+
         elif action == "extract":
             selector = command.get("selector")
             target_table = command.get("target", "daily_actuals")
             extract_config = command.get("extract_config", {})
+            amount_column_pattern = command.get("amount_column_pattern")  # e.g., "報酬合計"
+            horizontal = command.get("horizontal", False)  # For horizontal tables like affitown
 
             if not self.browser.page:
                 return False
@@ -601,6 +623,10 @@ class AgentLoop:
             try:
                 # Extract data directly using Playwright (NO AI APIs)
                 logger.info(f"Extracting data from selector: {selector}")
+                if amount_column_pattern:
+                    logger.info(f"Using amount_column_pattern: {amount_column_pattern}")
+                if horizontal:
+                    logger.info("Using horizontal table extraction mode")
 
                 # Get all tables matching the selector
                 tables = self.browser.page.locator(selector).all()
@@ -608,8 +634,75 @@ class AgentLoop:
 
                 extracted_records = []
 
-                # Try each table until we find one with valid data
-                for table_idx, table in enumerate(tables):
+                # Handle horizontal tables (like affitown)
+                if horizontal:
+                    for table_idx, table in enumerate(tables):
+                        logger.info(f"Trying horizontal table {table_idx + 1}/{len(tables)}")
+                        rows = table.locator("tr").all()
+                        logger.info(f"  Table has {len(rows)} rows")
+
+                        if len(rows) < 2:
+                            continue
+
+                        # Get all row data
+                        row_data = []
+                        for row in rows:
+                            cells = row.locator("td, th").all()
+                            cell_texts = [cell.inner_text().strip() for cell in cells]
+                            row_data.append(cell_texts)
+                            logger.info(f"  Row: {cell_texts[:5]}...")
+
+                        # Find year row (contains "年")
+                        year = None
+                        month_row_idx = None
+                        amount_row_idx = None
+
+                        for i, row_texts in enumerate(row_data):
+                            if row_texts and "年" in row_texts[0]:
+                                year = re.search(r'(\d{4})年', row_texts[0])
+                                year = year.group(1) if year else None
+                                month_row_idx = i + 1 if i + 1 < len(row_data) else None
+                                amount_row_idx = i + 2 if i + 2 < len(row_data) else None
+                                break
+
+                        if year and month_row_idx is not None and amount_row_idx is not None:
+                            month_texts = row_data[month_row_idx]
+                            amount_texts = row_data[amount_row_idx]
+
+                            for col_idx in range(len(month_texts)):
+                                month_text = month_texts[col_idx]
+                                amount_text = amount_texts[col_idx] if col_idx < len(amount_texts) else ""
+
+                                # Parse month (e.g., "01月", "11月(予定額)")
+                                month_match = re.match(r'(\d{1,2})月', month_text)
+                                if not month_match:
+                                    continue
+
+                                month = month_match.group(1).zfill(2)
+                                period = f"{year}-{month}"
+
+                                # Parse amount
+                                amount_str = re.sub(r'[¥,円$\s]', '', amount_text)
+                                try:
+                                    amount = int(amount_str) if amount_str else 0
+                                except:
+                                    amount = 0
+
+                                extracted_records.append({
+                                    "period": period,
+                                    "amount": amount
+                                })
+                                logger.info(f"  Extracted horizontal record: {period} -> {amount}")
+
+                        if extracted_records:
+                            break  # Found data in this table
+
+                    if extracted_records:
+                        logger.info(f"Successfully extracted {len(extracted_records)} horizontal records")
+
+                # Try each table until we find one with valid data (vertical tables)
+                if not horizontal:
+                  for table_idx, table in enumerate(tables):
                     logger.info(f"Trying table {table_idx + 1}/{len(tables)}")
 
                     # Get all rows
@@ -633,7 +726,28 @@ class AgentLoop:
 
                     # For daily data: find the rightmost column with the largest sum (likely total amount)
                     # For monthly data: use text matching
-                    if target_table == "daily_actuals":
+
+                    # If amount_column_pattern is specified, use it to find the column by header text
+                    if amount_column_pattern:
+                        logger.info(f"  Looking for column matching pattern: {amount_column_pattern}")
+                        # Scan first few rows to find header
+                        for i, row in enumerate(rows[:5]):
+                            cells = row.locator("td, th").all()
+                            if len(cells) < 2:
+                                continue
+                            cell_texts = [cell.inner_text().strip() for cell in cells]
+
+                            for col_idx, text in enumerate(cell_texts):
+                                normalized_text = text.replace(" ", "").replace("\n", "").replace("　", "")
+                                if amount_column_pattern in normalized_text:
+                                    header_row = i
+                                    amount_col_idx = col_idx
+                                    logger.info(f"  Found matching column at index {col_idx}: '{text}'")
+                                    break
+                            if amount_col_idx is not None:
+                                break
+
+                    if target_table == "daily_actuals" and amount_col_idx is None:
                         # Strategy: scan data rows and find the column with the largest values
                         logger.info("  Using heuristic approach for daily data: finding column with largest values")
 
@@ -647,9 +761,9 @@ class AgentLoop:
                                 continue
                             cell_texts = [cell.inner_text().strip() for cell in cells]
 
-                            # Check if first cell looks like a date (YYYY/MM/DD format)
+                            # Check if first cell looks like a date (YYYY/MM/DD or YYYY年MM月DD日 format)
                             first_cell = cell_texts[0]
-                            if re.match(r'\d{4}[/-]\d{1,2}[/-]\d{1,2}', first_cell):
+                            if re.match(r'\d{4}[/-]\d{1,2}[/-]\d{1,2}', first_cell) or re.match(r'\d{4}年\d{1,2}月\d{1,2}日', first_cell):
                                 header_row = i - 1
                                 logger.info(f"  Found data row at index {i}, header should be at {header_row}")
                                 break
@@ -703,7 +817,7 @@ class AgentLoop:
                             logger.warning("  Could not detect amount column by value analysis")
                             amount_col_idx = None
 
-                    else:
+                    elif amount_col_idx is None:
                         # For monthly data, use text matching as before
                         for i, row in enumerate(rows):
                             cells = row.locator("td, th").all()
@@ -742,8 +856,8 @@ class AgentLoop:
                                 for col_idx, text in enumerate(cell_texts):
                                     normalized_text = text.replace(" ", "").replace("\n", "").replace("　", "")
 
-                                    # Check various patterns
-                                    if any(pattern in normalized_text for pattern in ["確定報酬額", "税込", "発生報酬", "承認報酬"]):
+                                    # Check various patterns (including 金額 for CircuitX, 報酬合計 for Felmat)
+                                    if any(pattern in normalized_text for pattern in ["確定報酬額", "税込", "発生報酬", "承認報酬", "金額", "報酬合計"]):
                                         header_row = i
                                         amount_col_idx = col_idx
                                         logger.info(f"  Found fallback amount column at index {amount_col_idx}: {text}")
@@ -935,7 +1049,7 @@ class AgentLoop:
         """Parse date string to YYYY-MM-DD format.
 
         Args:
-            date_str: Date string (e.g., "2025/11/25", "2025-11-25", "11/25")
+            date_str: Date string (e.g., "2025/11/25", "2025-11-25", "11/25", "2025/11/25(月)", "2025年11月25日")
 
         Returns:
             Date in YYYY-MM-DD format, or None if parsing fails
@@ -945,6 +1059,17 @@ class AgentLoop:
 
         # Remove whitespace
         date_str = date_str.strip()
+
+        # Remove weekday suffix like (月), (火), (日) etc.
+        date_str = re.sub(r'\s*\([日月火水木金土曜]\)\s*', '', date_str)
+
+        # Try Japanese format first: YYYY年MM月DD日
+        jp_match = re.match(r'(\d{4})年(\d{1,2})月(\d{1,2})日', date_str)
+        if jp_match:
+            year = jp_match.group(1)
+            month = jp_match.group(2).zfill(2)
+            day = jp_match.group(3).zfill(2)
+            return f"{year}-{month}-{day}"
 
         # Try various date formats
         formats = [
