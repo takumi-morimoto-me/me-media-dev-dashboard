@@ -16,34 +16,53 @@ monthly:
       value: https://x-dashboard.cir.io/
     - action: wait
       milliseconds: 3000
-    # ログインフォームを探して入力
+    # ログインフォーム入力
     - action: fill
-      selector: "input[type='email'], input[name='email'], input[placeholder*='メール'], input[placeholder*='mail']"
+      selector: "input[type='email'], input[name='email']"
       value: "{SECRET:CIRCUITX_USERNAME}"
     - action: fill
-      selector: "input[type='password'], input[name='password']"
+      selector: "input[type='password']"
       value: "{SECRET:CIRCUITX_PASSWORD}"
     - action: click
-      selector: "button[type='submit'], input[type='submit'], button:has-text('ログイン'), button:has-text('Login')"
+      selector: "button[type='submit'], button:has-text('ログイン'), input[type='submit']"
     - action: wait
       milliseconds: 5000
-    # レポートページに移動
+    # サイドバーからレポートをクリック
     - action: click
-      selector: "a:has-text('レポート'), a:has-text('Report'), a[href*='report']"
+      selector: "a:has-text('レポート')"
     - action: wait
       milliseconds: 3000
-    # 月別レポートを選択
+    # 詳細レポートセクションまでスクロール
+    - action: scroll
+      selector: "body"
+      direction: down
+      amount: 500
+    - action: wait
+      milliseconds: 2000
+    # 月別タブをクリック
     - action: click
-      selector: "a:has-text('月別'), button:has-text('月別'), [data-tab='monthly']"
+      selector: "span:has-text('月別'), a:has-text('月別'), button:has-text('月別')"
     - action: wait
       milliseconds: 3000
     # スクリーンショットを撮る
     - action: screenshot
       path: "/tmp/circuitx_monthly.png"
-    # データ抽出
+    # 月別テーブルからデータ抽出
+    # テーブル構造: 年月, Click, CV, CVR, 金額
     - action: extract
-      selector: table
+      selector: "table"
       target: actuals
+      columns:
+        - name: month
+          selector: "td:nth-child(1)"
+        - name: clicks
+          selector: "td:nth-child(2)"
+        - name: cv
+          selector: "td:nth-child(3)"
+        - name: cvr
+          selector: "td:nth-child(4)"
+        - name: amount
+          selector: "td:nth-child(5)"
 
 # 日次データ取得シナリオ
 daily:
@@ -53,34 +72,53 @@ daily:
       value: https://x-dashboard.cir.io/
     - action: wait
       milliseconds: 3000
-    # ログインフォームを探して入力
+    # ログインフォーム入力
     - action: fill
-      selector: "input[type='email'], input[name='email'], input[placeholder*='メール'], input[placeholder*='mail']"
+      selector: "input[type='email'], input[name='email']"
       value: "{SECRET:CIRCUITX_USERNAME}"
     - action: fill
-      selector: "input[type='password'], input[name='password']"
+      selector: "input[type='password']"
       value: "{SECRET:CIRCUITX_PASSWORD}"
     - action: click
-      selector: "button[type='submit'], input[type='submit'], button:has-text('ログイン'), button:has-text('Login')"
+      selector: "button[type='submit'], button:has-text('ログイン'), input[type='submit']"
     - action: wait
       milliseconds: 5000
-    # レポートページに移動
+    # サイドバーからレポートをクリック
     - action: click
-      selector: "a:has-text('レポート'), a:has-text('Report'), a[href*='report']"
+      selector: "a:has-text('レポート')"
     - action: wait
       milliseconds: 3000
-    # 日別レポートを選択
+    # 詳細レポートセクションまでスクロール
+    - action: scroll
+      selector: "body"
+      direction: down
+      amount: 500
+    - action: wait
+      milliseconds: 2000
+    # 日別タブをクリック（デフォルトで選択されている可能性あり）
     - action: click
-      selector: "a:has-text('日別'), button:has-text('日別'), [data-tab='daily']"
+      selector: "span:has-text('日別'), a:has-text('日別'), button:has-text('日別')"
     - action: wait
       milliseconds: 3000
     # スクリーンショットを撮る
     - action: screenshot
       path: "/tmp/circuitx_daily.png"
-    # データ抽出
+    # 日別テーブルからデータ抽出
+    # テーブル構造: 日付, Click, CV, CVR, 金額
     - action: extract
-      selector: table
+      selector: "table"
       target: daily_actuals
+      columns:
+        - name: date
+          selector: "td:nth-child(1)"
+        - name: clicks
+          selector: "td:nth-child(2)"
+        - name: cv
+          selector: "td:nth-child(3)"
+        - name: cvr
+          selector: "td:nth-child(4)"
+        - name: amount
+          selector: "td:nth-child(5)"
 
 # リトライ設定
 retry:
