@@ -41,6 +41,7 @@ interface AspsTableProps {
   onDelete?: (asp: AspWithCredentials) => void
   onBulkDelete?: (aspIds: string[]) => void
   onUrlUpdate?: (aspId: string, newUrl: string) => Promise<void>
+  onActiveToggle?: (aspId: string, isActive: boolean) => Promise<void>
 }
 
 export function AspsTable({
@@ -51,6 +52,7 @@ export function AspsTable({
   onDelete,
   onBulkDelete,
   onUrlUpdate,
+  onActiveToggle,
 }: AspsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -96,6 +98,7 @@ export function AspsTable({
     onEdit,
     onDelete,
     onUrlUpdate,
+    onActiveToggle,
   })
 
   const table = useReactTable({
@@ -174,6 +177,7 @@ export function AspsTable({
           <Table
             style={{
               width: table.getTotalSize(),
+              tableLayout: "fixed",
             }}
           >
             <TableHeader>

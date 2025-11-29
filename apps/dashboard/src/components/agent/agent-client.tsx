@@ -105,6 +105,18 @@ export function AgentClient() {
     }
   };
 
+  // 稼働状況トグルハンドラ
+  const handleActiveToggle = async (aspId: string, isActive: boolean) => {
+    const result = await updateAsp(aspId, { is_active: isActive });
+
+    if (result.error) {
+      toast.error(result.error);
+      throw new Error(result.error);
+    } else {
+      toast.success(isActive ? "稼働中に変更しました" : "未稼働に変更しました");
+    }
+  };
+
   return (
     <div className="w-full h-full pr-6">
       {/* Table Area */}
@@ -123,6 +135,7 @@ export function AgentClient() {
           onDelete={handleDelete}
           onBulkDelete={handleBulkDelete}
           onUrlUpdate={handleUrlUpdate}
+          onActiveToggle={handleActiveToggle}
         />
       </div>
 

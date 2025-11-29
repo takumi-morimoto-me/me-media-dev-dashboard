@@ -52,7 +52,7 @@ export function EditableUrlCell({
     // URLのバリデーション
     try {
       new URL(currentValue)
-    } catch (error) {
+    } catch {
       toast.error("有効なURLを入力してください。")
       return
     }
@@ -60,7 +60,7 @@ export function EditableUrlCell({
     try {
       await onSave(currentValue)
       setIsEditing(false)
-    } catch (error) {
+    } catch {
       // onSave内でtoastが表示される想定だが、念のため
       toast.error("URLの更新に失敗しました。")
     }

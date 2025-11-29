@@ -21,6 +21,7 @@ export const aspUpdateSchema = z.object({
   login_url: z.string().url({ message: "有効なURLを入力してください。" }).optional(),
   prompt: z.string().optional(),
   category: z.string().optional(),
+  is_active: z.boolean().optional(),
 });
 
 export type AspCredential = z.infer<typeof aspCredentialSchema>;

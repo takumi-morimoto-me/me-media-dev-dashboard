@@ -21,6 +21,14 @@ type Asp = {
   prompt: string | null
   created_at: string
   updated_at: string | null
+  // 稼働状況
+  is_active: boolean | null
+  // reCAPTCHA関連
+  has_recaptcha: boolean | null
+  recaptcha_status: string | null
+  last_scrape_at: string | null
+  last_scrape_status: string | null
+  scrape_notes: string | null
 }
 
 type AspCredential = {

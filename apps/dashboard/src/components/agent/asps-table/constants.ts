@@ -19,12 +19,20 @@ export const DEFAULT_COLUMN_SIZES: Record<string, number> = {
   username: w(40),            // 160px
   password: w(40),            // 160px
   prompt: w(40),              // 160px
+  recaptcha: w(30),           // 120px
+  lastScrape: w(40),          // 160px
 }
 
 // localStorage keys
 export const STORAGE_KEY_COLUMN_ORDER = "asps-table-column-order"
 export const STORAGE_KEY_COLUMN_VISIBILITY = "asps-table-column-visibility"
-export const STORAGE_KEY_COLUMN_SIZES = "asps-table-column-sizes"
+export const STORAGE_KEY_COLUMN_SIZES = "asps-table-column-sizes-v2" // v2: fixed 160px columns
+
+// reCAPTCHA突破状況
+export type RecaptchaStatus = 'not_applicable' | 'bypassed' | 'unstable' | 'blocked' | 'unknown'
+
+// 最後のスクレイピング結果
+export type ScrapeStatus = 'success' | 'failed' | 'partial'
 
 // ASP型定義
 export interface AspWithCredentials {
@@ -35,6 +43,14 @@ export interface AspWithCredentials {
   created_at: string
   updated_at: string | null
   credentials: AspCredential[]
+  // 稼働状況
+  is_active: boolean | null
+  // reCAPTCHA関連
+  has_recaptcha: boolean | null
+  recaptcha_status: string | null
+  last_scrape_at: string | null
+  last_scrape_status: string | null
+  scrape_notes: string | null
 }
 
 export interface AspCredential {
