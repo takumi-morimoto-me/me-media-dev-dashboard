@@ -1,0 +1,12 @@
+{
+    "monthly": {
+        "generated_at": "2025-11-28T10:48:00+09:00",
+        "yaml_hash": "manual-verified",
+        "model": "manual"
+    },
+    "daily": {
+        "generated_at": "2025-11-28T10:48:00+09:00",
+        "yaml_hash": "manual-verified",
+        "model": "manual"
+    }
+}

@@ -1,0 +1,1 @@
+# moshimo scraper module
