@@ -1,0 +1,115 @@
+# もしもアフィリエイト シナリオ定義
+name: moshimo
+display_name: "もしも（ビギナーズ）"
+asp_name_in_db: "もしも（ビギナーズ）"
+login_url: https://af.moshimo.com/af/shop/index
+
+credentials:
+  username_key: MOSHIMO_USERNAME
+  password_key: MOSHIMO_PASSWORD
+
+# 月次データ取得シナリオ
+monthly:
+  description: "月次レポートから報酬額を取得"
+  currency: JPY
+  report_url: https://af.moshimo.com/af/shop/report/payment/monthly
+  csv_encoding: shift_jis
+  actions:
+    - action: navigate
+      value: https://af.moshimo.com/af/shop/index
+    - action: wait
+      milliseconds: 2000
+    # ログインフォーム入力
+    - action: fill
+      selector: "input[name='account']"
+      value: "{SECRET:MOSHIMO_USERNAME}"
+    - action: fill
+      selector: "input[name='password']"
+      value: "{SECRET:MOSHIMO_PASSWORD}"
+    - action: click
+      selector: "input[name='login']"
+    - action: wait
+      milliseconds: 5000
+    # 売上レポートへ
+    - action: click
+      selector: "text=売上レポート"
+    - action: wait
+      milliseconds: 3000
+    # 月次タブへ
+    - action: click
+      selector: "text=月次"
+    - action: wait
+      milliseconds: 3000
+    # CSVダウンロード
+    - action: download
+      selector: "text=CSVダウンロード"
+      path: "/tmp/moshimo_monthly.csv"
+    # CSVからデータ抽出
+    - action: extract_csv
+      path: "/tmp/moshimo_monthly.csv"
+      encoding: shift_jis
+      target: actuals
+      date_column: "期間"
+      date_format: "%Y年%m月"
+      amount_column: "報酬額"
+      amount_format: "yen"
+
+# 日次データ取得シナリオ
+daily:
+  description: "日次レポートから報酬額を取得"
+  currency: JPY
+  report_url: https://af.moshimo.com/af/shop/report/payment/daily
+  csv_encoding: shift_jis
+  actions:
+    - action: navigate
+      value: https://af.moshimo.com/af/shop/index
+    - action: wait
+      milliseconds: 2000
+    # ログインフォーム入力
+    - action: fill
+      selector: "input[name='account']"
+      value: "{SECRET:MOSHIMO_USERNAME}"
+    - action: fill
+      selector: "input[name='password']"
+      value: "{SECRET:MOSHIMO_PASSWORD}"
+    - action: click
+      selector: "input[name='login']"
+    - action: wait
+      milliseconds: 5000
+    # 売上レポートへ
+    - action: click
+      selector: "text=売上レポート"
+    - action: wait
+      milliseconds: 3000
+    # 日次タブへ
+    - action: click
+      selector: "text=日次"
+    - action: wait
+      milliseconds: 3000
+    # CSVダウンロード
+    - action: download
+      selector: "text=CSVダウンロード"
+      path: "/tmp/moshimo_daily.csv"
+    # CSVからデータ抽出
+    - action: extract_csv
+      path: "/tmp/moshimo_daily.csv"
+      encoding: shift_jis
+      target: daily_actuals
+      date_column: "期間"
+      date_format: "%Y年%m月%d日"
+      amount_column: "報酬額"
+      amount_format: "yen"
+
+# リトライ設定
+retry:
+  max_attempts: 3
+  delay_ms: 2000
+  retry_on:
+    - timeout
+    - element_not_found
+
+# 特記事項
+notes:
+  - "reCAPTCHAなし、安定して動作"
+  - "CSVエンコーディングはShift_JIS"
+  - "報酬額は¥マーク付きの日本円形式"

@@ -1,0 +1,116 @@
+# A8app（ビギナーズ）シナリオ定義
+name: a8app
+display_name: "A8app（ビギナーズ）"
+asp_name_in_db: "SeedApp（ビギナーズ） =A8app"
+login_url: https://admin.seedapp.jp/
+
+credentials:
+  username_key: A8APP_USERNAME
+  password_key: A8APP_PASSWORD
+
+# 月次データ取得シナリオ（CSVダウンロード）
+monthly:
+  description: "月別レポートからCSVダウンロードして成果報酬額（税抜）を取得"
+  actions:
+    - action: navigate
+      value: https://admin.seedapp.jp/
+    - action: wait
+      milliseconds: 3000
+    # スクリーンショットを撮る（ログイン画面）
+    - action: screenshot
+      path: "/tmp/a8app_login_page.png"
+    # ログインフォーム入力（様々なセレクタを試す）
+    - action: fill
+      selector: "input[type='email'], input[name='email'], input[name='login_id'], input[type='text']:first-of-type"
+      value: "{SECRET:A8APP_USERNAME}"
+    - action: fill
+      selector: "input[type='password'], input[name='password']"
+      value: "{SECRET:A8APP_PASSWORD}"
+    - action: click
+      selector: "button[type='submit'], input[type='submit'], button:has-text('ログイン'), a:has-text('ログイン')"
+      no_wait_after: true
+      timeout: 30000
+    - action: wait
+      milliseconds: 5000
+    # スクリーンショットを撮る（ログイン後）
+    - action: screenshot
+      path: "/tmp/a8app_after_login.png"
+    # サイドバーの月別レポートをクリック（バッチレポート配下にすでに表示されている）
+    - action: click
+      selector: "nav a:has-text('月別レポート'), aside a:has-text('月別レポート'), .sidebar a:has-text('月別レポート'), a[href*='monthly']"
+    - action: wait
+      milliseconds: 5000
+    # スクリーンショットを撮る（月別レポートページ）
+    - action: screenshot
+      path: "/tmp/a8app_monthly.png"
+    # CSVダウンロード(一覧)をクリック
+    - action: download
+      selector: "a:has-text('CSVダウンロード(一覧)'), button:has-text('CSVダウンロード(一覧)')"
+      path: "/tmp/a8app_monthly.csv"
+    - action: wait
+      milliseconds: 3000
+    # CSVからデータ抽出（成果報酬額（税抜））
+    - action: extract_csv
+      path: "/tmp/a8app_monthly.csv"
+      target: actuals
+      date_column: "年月"
+      amount_column: "成果報酬額（税抜）"
+
+# 日次データ取得シナリオ（CSVダウンロード）
+daily:
+  description: "日別レポートからCSVダウンロードして成果報酬額（税抜）を取得"
+  actions:
+    - action: navigate
+      value: https://admin.seedapp.jp/
+    - action: wait
+      milliseconds: 3000
+    # ログインフォーム入力（monthlyと同じセレクタ）
+    - action: fill
+      selector: "input[type='email'], input[name='email'], input[name='login_id'], input[type='text']:first-of-type"
+      value: "{SECRET:A8APP_USERNAME}"
+    - action: fill
+      selector: "input[type='password'], input[name='password']"
+      value: "{SECRET:A8APP_PASSWORD}"
+    - action: click
+      selector: "button[type='submit'], input[type='submit'], button:has-text('ログイン'), a:has-text('ログイン')"
+      no_wait_after: true
+      timeout: 30000
+    - action: wait
+      milliseconds: 5000
+    # スクリーンショットを撮る（ログイン後）
+    - action: screenshot
+      path: "/tmp/a8app_after_login.png"
+    # サイドバーの日別レポートをクリック（バッチレポート配下にすでに表示されている）
+    - action: click
+      selector: "nav a:has-text('日別レポート'), aside a:has-text('日別レポート'), .sidebar a:has-text('日別レポート'), a[href*='daily']"
+    - action: wait
+      milliseconds: 5000
+    # スクリーンショットを撮る（日別レポートページ）
+    - action: screenshot
+      path: "/tmp/a8app_daily_page.png"
+    # モーダルが表示されている場合は閉じる（日別レポート詳細ダイアログ）
+    - action: click
+      selector: "#detail-modal button.close, #detail-modal .modal-footer button, button:has-text('閉じる')"
+      optional: true
+    - action: wait
+      milliseconds: 1000
+    # デフォルトで直近30日間のデータが表示されるため、そのままCSVダウンロード
+    - action: download
+      selector: "a:has-text('CSVダウンロード(一覧)'), button:has-text('CSVダウンロード(一覧)')"
+      path: "/tmp/a8app_daily.csv"
+    - action: wait
+      milliseconds: 3000
+    # CSVからデータ抽出（成果報酬額（税抜））
+    - action: extract_csv
+      path: "/tmp/a8app_daily.csv"
+      target: daily_actuals
+      date_column: "日付"
+      amount_column: "成果報酬額（税抜）"
+
+# リトライ設定
+retry:
+  max_attempts: 3
+  delay_ms: 2000
+  retry_on:
+    - timeout
+    - element_not_found

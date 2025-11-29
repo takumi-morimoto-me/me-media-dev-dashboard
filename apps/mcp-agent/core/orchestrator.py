@@ -1030,9 +1030,12 @@ class AgentLoop:
 
                 logger.info(f"CSV has {len(rows)} rows, columns: {rows[0].keys() if rows else 'none'}")
 
+                # Determine if this is monthly data (use period parser) or daily data (use date parser)
+                is_monthly = target_table == "actuals"
+
                 extracted_records = []
                 for row in rows:
-                    # Get date
+                    # Get date/period
                     date_str = row.get(date_column, "")
                     if not date_str:
                         # Try to find a column containing the date pattern
@@ -1040,13 +1043,31 @@ class AgentLoop:
                             if re.match(r'\d{4}[/-]\d{1,2}[/-]\d{1,2}', str(val)):
                                 date_str = val
                                 break
+                            # Also check for Japanese year-month format
+                            if re.match(r'\d{4}年\d{1,2}月', str(val)):
+                                date_str = val
+                                break
 
-                    parsed_date = self._parse_date(date_str)
-                    if not parsed_date:
-                        continue
+                    # Use period parser for monthly, date parser for daily
+                    if is_monthly:
+                        parsed_period = self._parse_period(date_str)
+                        if not parsed_period:
+                            continue
+                        # Convert YYYY-MM to YYYY-MM-01 for DB storage
+                        parsed_date = f"{parsed_period}-01"
+                    else:
+                        parsed_date = self._parse_date(date_str)
+                        if not parsed_date:
+                            continue
 
-                    # Get amount
+                    # Get amount - try exact match first, then partial match
                     amount_str = row.get(amount_column, "")
+                    if not amount_str:
+                        # Try partial match on column name
+                        for key, val in row.items():
+                            if amount_column in key:
+                                amount_str = val
+                                break
                     if not amount_str:
                         # Try to find amount column by pattern
                         for key, val in row.items():
@@ -1109,7 +1130,7 @@ class AgentLoop:
         matches = re.findall(pattern, value)
 
         for secret_key in matches:
-            actual_secret_key = secret_key
+            secret_value = None
 
             # Check if this is a credential that needs media-specific lookup
             if secret_key.endswith("_USERNAME") or secret_key.endswith("_PASSWORD"):
@@ -1126,24 +1147,28 @@ class AgentLoop:
                         if result.data and len(result.data) > 0:
                             creds = result.data[0]
 
-                            # Determine which field to use
+                            # Get the actual credential value directly from the table
                             if secret_key.endswith("_USERNAME"):
-                                actual_secret_key = creds.get("username_secret_key", secret_key)
-                                logger.info(f"Resolved {secret_key} to {actual_secret_key} for media {self.current_media_id}")
+                                secret_value = creds.get("username_secret_key")
+                                logger.info(f"Resolved {secret_key} from asp_credentials for media {self.current_media_id}")
                             elif secret_key.endswith("_PASSWORD"):
-                                actual_secret_key = creds.get("password_secret_key", secret_key)
-                                logger.info(f"Resolved {secret_key} to {actual_secret_key} for media {self.current_media_id}")
+                                secret_value = creds.get("password_secret_key")
+                                logger.info(f"Resolved {secret_key} from asp_credentials for media {self.current_media_id}")
                         else:
-                            logger.warning(f"No credentials found for media {self.current_media_id} and ASP {asp_id}, using default key {secret_key}")
+                            logger.warning(f"No credentials found for media {self.current_media_id} and ASP {asp_id}")
                     except Exception as e:
                         logger.error(f"Error querying asp_credentials: {e}")
 
-            # Look up actual value from environment
-            secret_value = os.getenv(actual_secret_key, "")
+            # Fall back to environment variable if not found in asp_credentials
+            if not secret_value:
+                secret_value = os.getenv(secret_key, "")
+                if secret_value:
+                    logger.info(f"Resolved {secret_key} from environment variable")
+
             if secret_value:
                 value = value.replace(f"{{SECRET:{secret_key}}}", secret_value)
             else:
-                logger.warning(f"Secret not found in environment: {actual_secret_key}")
+                logger.warning(f"Secret not found for: {secret_key}")
 
         return value
 
@@ -1251,7 +1276,8 @@ class AgentLoop:
         amount_str = re.sub(r"[¥,円$]", "", amount_str)
 
         try:
-            return int(amount_str)
+            # Handle decimal numbers (e.g., 444553.0)
+            return int(float(amount_str))
         except ValueError:
             logger.warning(f"Failed to parse amount: {amount_str}")
             return 0
