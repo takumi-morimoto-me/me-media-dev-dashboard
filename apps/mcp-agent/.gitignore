@@ -49,3 +49,14 @@ screenshots/test-runs/**/*.jpg
 # Logs
 *.log
 logs/
+
+# Temporary/debug scripts
+debug_*.py
+task.md
+inspect_*.py
+check_*.py
+list_*.py
+update_*.py
+
+# Temporary downloads
+/tmp/
