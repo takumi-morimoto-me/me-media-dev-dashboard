@@ -41,6 +41,7 @@ daily:
     - action: extract
       selector: table
       target: daily_actuals
+      amount_column_pattern: "確定報酬額"
 
 # 月次データ取得シナリオ
 monthly:
@@ -75,6 +76,7 @@ monthly:
     - action: extract
       selector: table
       target: actuals
+      amount_column_pattern: "確定報酬額"
 
 # リトライ設定
 retry:
