@@ -35,6 +35,14 @@ interface AspFinancialsTableProps {
 
 const formatNumber = (num: number) => new Intl.NumberFormat('ja-JP').format(num);
 
+// ASP名から（）とその中身を除去するヘルパー関数
+const cleanAspName = (name: string): string => {
+  return name
+    .replace(/[（(][^）)]*[）)]/g, '')  // Remove parentheses and content
+    .replace(/\s*=\s*\w+$/g, '')         // Remove " =A8app" suffixes
+    .trim()
+};
+
 const DataRow: React.FC<{
   asp: AspRow;
   headers: Header[];
@@ -43,7 +51,7 @@ const DataRow: React.FC<{
   return (
     <TableRow className="hover:bg-muted/50">
       <TableCell className="sticky left-0 z-10 whitespace-nowrap bg-background">
-        <span>{asp.asp_name}</span>
+        <span>{cleanAspName(asp.asp_name)}</span>
       </TableCell>
       {headers.map(header => {
         const actual = data[asp.asp_id]?.[header.key] || 0;
