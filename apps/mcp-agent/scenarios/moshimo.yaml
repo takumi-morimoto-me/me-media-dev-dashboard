@@ -18,11 +18,12 @@ monthly:
     - action: navigate
       value: https://af.moshimo.com/af/shop/index
     - action: wait
-      milliseconds: 2000
-    # ログインフォーム入力
+      milliseconds: 5000
+    # ログインフォームが表示されるまで待機してから入力
     - action: fill
       selector: "input[name='account']"
       value: "{SECRET:MOSHIMO_USERNAME}"
+      timeout: 60000
     - action: fill
       selector: "input[name='password']"
       value: "{SECRET:MOSHIMO_PASSWORD}"
@@ -64,11 +65,12 @@ daily:
     - action: navigate
       value: https://af.moshimo.com/af/shop/index
     - action: wait
-      milliseconds: 2000
-    # ログインフォーム入力
+      milliseconds: 5000
+    # ログインフォームが表示されるまで待機してから入力
     - action: fill
       selector: "input[name='account']"
       value: "{SECRET:MOSHIMO_USERNAME}"
+      timeout: 60000
     - action: fill
       selector: "input[name='password']"
       value: "{SECRET:MOSHIMO_PASSWORD}"

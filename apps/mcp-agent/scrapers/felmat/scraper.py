@@ -25,19 +25,24 @@ class FelmatScraper(BaseScraper):
     def login(self, page: Page) -> bool:
         """ログイン処理"""
         print(f"Navigating to {self.LOGIN_URL}...")
-        page.goto(self.LOGIN_URL)
+        page.goto(self.LOGIN_URL, timeout=60000)
         page.wait_for_timeout(3000)
 
         print("Filling login form...")
         page.fill("input[name='p_username']", self.username)
         page.fill("input[name='p_password']", self.password)
-        page.click("button[type='submit']")
-        page.wait_for_timeout(5000)
 
-        # ログイン成功判定
-        if page.locator("text=ログアウト").count() > 0 or page.locator("text=レポート").count() > 0:
+        print("Clicking login button...")
+        page.click("button[type='submit']")
+        page.wait_for_timeout(8000)
+
+        # ログイン成功判定 - ダッシュボードが表示されるか確認
+        print("Checking login success...")
+        if page.locator("text=DASHBOARD").count() > 0 or page.locator("text=ログアウト").count() > 0 or page.locator("text=レポート").count() > 0:
+            print("Login successful")
             return True
 
+        print("Login failed - expected elements not found")
         return False
 
     def _parse_amount(self, text: str) -> int:

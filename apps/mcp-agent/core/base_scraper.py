@@ -326,7 +326,7 @@ class BaseScraper(ABC):
     # ==================== データ保存 ====================
 
     def _save_daily_records(self, records: List[Dict]) -> int:
-        """日次レコードを保存"""
+        """日次レコードを保存（upsertで重複を回避）"""
         # レコードにメタデータを追加
         enriched_records = []
         for record in records:
@@ -341,29 +341,17 @@ class BaseScraper(ABC):
         if not enriched_records:
             return 0
 
-        # 既存データを削除（今月分）
-        now = datetime.now()
-        start_date = now.strftime('%Y-%m-01')
-        end_date = now.strftime('%Y-%m-%d')
-
-        print(f"Deleting existing records from {start_date} to {end_date}...")
-        try:
-            self.supabase.table('daily_actuals').delete().eq(
-                'asp_id', self.asp_id
-            ).eq(
-                'media_id', self.media_id
-            ).gte('date', start_date).lte('date', end_date).execute()
-        except Exception as e:
-            print(f"Delete failed (might be OK): {e}")
-
-        # 新規データを挿入
-        print(f"Inserting {len(enriched_records)} records...")
-        result = self.supabase.table('daily_actuals').insert(enriched_records).execute()
+        # upsertで重複キーを更新（date, media_id, account_item_id, asp_id）
+        print(f"Upserting {len(enriched_records)} daily records...")
+        result = self.supabase.table('daily_actuals').upsert(
+            enriched_records,
+            on_conflict='date,media_id,account_item_id,asp_id'
+        ).execute()
 
         return len(result.data)
 
     def _save_monthly_records(self, records: List[Dict]) -> int:
-        """月次レコードを保存"""
+        """月次レコードを保存（upsertで重複を回避）"""
         enriched_records = []
         for record in records:
             enriched_records.append({
@@ -377,24 +365,12 @@ class BaseScraper(ABC):
         if not enriched_records:
             return 0
 
-        # 取得したデータの日付範囲を計算
-        dates = [r['date'] for r in enriched_records]
-        start_date = min(dates)
-        end_date = max(dates)
-
-        print(f"Deleting existing records from {start_date} to {end_date}...")
-        try:
-            self.supabase.table('actuals').delete().eq(
-                'asp_id', self.asp_id
-            ).eq(
-                'media_id', self.media_id
-            ).gte('date', start_date).lte('date', end_date).execute()
-        except Exception as e:
-            print(f"Delete failed (might be OK): {e}")
-
-        # 新規データを挿入
-        print(f"Inserting {len(enriched_records)} records...")
-        result = self.supabase.table('actuals').insert(enriched_records).execute()
+        # upsertで重複キーを更新（date, media_id, account_item_id, asp_id）
+        print(f"Upserting {len(enriched_records)} records...")
+        result = self.supabase.table('actuals').upsert(
+            enriched_records,
+            on_conflict='date,media_id,account_item_id,asp_id'
+        ).execute()
 
         return len(result.data)
 

@@ -18,13 +18,14 @@ monthly:
       milliseconds: 3000
     # ログインフォーム入力
     - action: fill
-      selector: "input[name='login_id'], input[type='text']:first-of-type, input#login_id"
+      selector: "input#p_username"
       value: "{SECRET:FELMAT_USERNAME}"
+      timeout: 60000
     - action: fill
-      selector: "input[name='password'], input[type='password']"
+      selector: "input#p_password"
       value: "{SECRET:FELMAT_PASSWORD}"
     - action: click
-      selector: "button[type='submit'], input[type='submit'], button:has-text('LOG IN'), button:has-text('ログイン')"
+      selector: "button:has-text('LOG IN')"
       no_wait_after: true
       timeout: 30000
     - action: wait
@@ -79,13 +80,14 @@ daily:
       milliseconds: 3000
     # ログインフォーム入力
     - action: fill
-      selector: "input[name='login_id'], input[type='text']:first-of-type, input#login_id"
+      selector: "input#p_username"
       value: "{SECRET:FELMAT_USERNAME}"
+      timeout: 60000
     - action: fill
-      selector: "input[name='password'], input[type='password']"
+      selector: "input#p_password"
       value: "{SECRET:FELMAT_PASSWORD}"
     - action: click
-      selector: "button[type='submit'], input[type='submit'], button:has-text('LOG IN'), button:has-text('ログイン')"
+      selector: "button:has-text('LOG IN')"
       no_wait_after: true
       timeout: 30000
     - action: wait
