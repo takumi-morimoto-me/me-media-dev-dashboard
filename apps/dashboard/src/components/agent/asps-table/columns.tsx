@@ -4,9 +4,17 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { AspWithCredentials, RecaptchaStatus, ScrapeStatus } from "./constants"
-import { PasswordCell, EditableUrlCell } from "./cells"
+import { PasswordCell, EditableUrlCell, EditableNameCell } from "./cells"
 import { Shield, ShieldAlert, ShieldCheck, ShieldQuestion, ShieldX } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+
+// ASP名から（）とその中身を除去するヘルパー関数
+const cleanAspName = (name: string): string => {
+  return name
+    .replace(/[（(][^）)]*[）)]/g, '')  // Remove parentheses and content
+    .replace(/\s*=\s*\w+$/g, '')         // Remove " =A8app" suffixes
+    .trim()
+}
 
 // reCAPTCHAステータスの表示設定
 const recaptchaStatusConfig: Record<RecaptchaStatus, { icon: typeof Shield; color: string; label: string }> = {
@@ -29,11 +37,12 @@ export interface GetColumnsOptions {
   onEdit?: (asp: AspWithCredentials) => void
   onDelete?: (asp: AspWithCredentials) => void
   onUrlUpdate?: (aspId: string, newUrl: string) => Promise<void>
+  onNameUpdate?: (aspId: string, newName: string) => Promise<void>
   onActiveToggle?: (aspId: string, isActive: boolean) => Promise<void>
 }
 
 export function getColumns(options?: GetColumnsOptions): ColumnDef<AspWithCredentials>[] {
-  const { selectedMediaId, onUrlUpdate, onActiveToggle } = options || {}
+  const { selectedMediaId, onUrlUpdate, onNameUpdate, onActiveToggle } = options || {}
 
   return [
     // チェックボックス
@@ -99,11 +108,36 @@ export function getColumns(options?: GetColumnsOptions): ColumnDef<AspWithCreden
       id: "name",
       accessorKey: "name",
       header: "サービス名",
-      cell: ({ row }) => (
-        <div className="font-medium px-2 truncate max-w-[320px]">
-          {row.original.name}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const cleanedName = cleanAspName(row.original.name)
+        const isAllMedia = !selectedMediaId
+        const mediaNames = row.original.credentials.map(c => c.media.name)
+
+        return (
+          <div className="max-w-[320px] overflow-hidden">
+            <div className="flex items-center gap-2">
+              <EditableNameCell
+                value={row.original.name}
+                displayValue={cleanedName}
+                onSave={async (newName) => {
+                  if (onNameUpdate) {
+                    await onNameUpdate(row.original.id, newName)
+                  }
+                }}
+              />
+              {isAllMedia && mediaNames.length > 0 && (
+                <div className="flex gap-1 flex-shrink-0">
+                  {mediaNames.map((name) => (
+                    <Badge key={name} variant="outline" className="text-[10px] px-1 py-0">
+                      {name}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      },
       enableSorting: true,
       size: 320,
       minSize: 320,
