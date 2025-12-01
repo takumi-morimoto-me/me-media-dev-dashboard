@@ -19,9 +19,10 @@ from core.base_scraper import BaseScraper
 class WebridgeScraper(BaseScraper):
     """Webridge スクレイパー"""
 
-    LOGIN_URL = 'https://mobile.webridge.co.jp/login'
-    DAILY_REPORT_URL = 'https://mobile.webridge.co.jp/report/daily'
-    MONTHLY_REPORT_URL = 'https://mobile.webridge.co.jp/report/monthly'
+    # 正しいログインURLを使用
+    LOGIN_URL = 'https://webridge.net/ja_jp/top/publisher/login'
+    DAILY_REPORT_URL = 'https://webridge.net/ja_jp/publisher/report/daily'
+    MONTHLY_REPORT_URL = 'https://webridge.net/ja_jp/publisher/report/monthly'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -45,25 +46,20 @@ class WebridgeScraper(BaseScraper):
         """ログイン処理"""
         login_url = self.login_url or self.LOGIN_URL
         print(f"Navigating to {login_url}...")
-        page.goto(login_url)
-        page.wait_for_load_state("networkidle")
-        self.human_delay(1000, 2000)
+        page.goto(login_url, timeout=60000)
+        page.wait_for_timeout(3000)
 
-        # 人間らしいタイピング
-        page.click("input[name='loginUser']")
-        self.human_delay(200, 500)
+        print("Filling login form...")
+        # 正確なセレクタを使用
         page.fill("input[name='loginUser']", self.username)
-        self.human_delay(500, 1000)
-
-        page.click("input[name='loginPassword']")
-        self.human_delay(200, 500)
+        self.human_delay(300, 500)
         page.fill("input[name='loginPassword']", self.password)
-        self.human_delay(500, 1000)
+        self.human_delay(300, 500)
 
-        # Enterキーでログイン
-        page.press("input[name='loginPassword']", "Enter")
-        page.wait_for_load_state("networkidle")
-        self.human_delay(2000, 3000)
+        print("Clicking login button...")
+        # ログインボタンをクリック
+        page.click("button[type='submit']")
+        page.wait_for_timeout(8000)
 
         # ログイン後のスクリーンショット
         page.screenshot(path="/tmp/webridge_after_login.png")
@@ -74,11 +70,13 @@ class WebridgeScraper(BaseScraper):
             return False
 
         # ログイン成功確認
-        if page.locator("text=ホーム").count() == 0 and "login" in page.url.lower():
-            print("Login failed - still on login page")
-            return False
+        print("Checking login success...")
+        if "login" not in page.url.lower() or page.locator("text=ホーム").count() > 0 or page.locator("text=ログアウト").count() > 0:
+            print("Login successful")
+            return True
 
-        return True
+        print("Login failed - still on login page")
+        return False
 
     def _navigate_to_daily_report(self, page: Page):
         """日次レポートページへ移動"""

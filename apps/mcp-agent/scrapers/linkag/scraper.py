@@ -23,19 +23,26 @@ class LinkagScraper(BaseScraper):
     def login(self, page: Page) -> bool:
         """ログイン処理"""
         print(f"Navigating to {self.LOGIN_URL}...")
-        page.goto(self.LOGIN_URL)
+        page.goto(self.LOGIN_URL, timeout=60000)
         page.wait_for_timeout(3000)
 
-        print("Filling login form...")
-        page.fill("input[name='login_id'], input[type='text']:first-of-type", self.username)
-        page.fill("input[name='password'], input[type='password']", self.password)
-        page.click("button[type='submit'], input[type='submit']")
+        print("Filling partner login form...")
+        # パートナーログインフォームを明示的に指定（2つのフォームがある）
+        partner_form = page.locator("form").filter(has=page.locator("input[name='partner_user[login_id]']")).first
+        partner_form.locator("input[name='partner_user[login_id]']").fill(self.username)
+        partner_form.locator("input[name='partner_user[password]']").fill(self.password)
+
+        print("Clicking login button...")
+        partner_form.locator("input[name='commit']").click()
         page.wait_for_timeout(8000)
 
         # ログイン成功判定
-        if page.locator("text=ログアウト").count() > 0 or page.locator("text=レポート").count() > 0:
+        print("Checking login success...")
+        if page.locator("text=ログアウト").count() > 0 or page.locator("text=レポート").count() > 0 or "partner" in page.url:
+            print("Login successful")
             return True
 
+        print("Login failed")
         return False
 
     def _parse_amount(self, text: str) -> int:

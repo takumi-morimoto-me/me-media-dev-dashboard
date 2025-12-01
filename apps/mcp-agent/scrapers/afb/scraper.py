@@ -24,25 +24,33 @@ class AfbScraper(BaseScraper):
     def login(self, page: Page) -> bool:
         """ログイン処理"""
         print(f"Navigating to {self.LOGIN_URL}...")
-        page.goto(self.LOGIN_URL)
-        page.wait_for_timeout(2000)
+        page.goto(self.LOGIN_URL, timeout=60000)
+        page.wait_for_timeout(3000)
 
-        print("Filling login form...")
-        page.fill("input[type='text']", self.username)
-        page.fill("input[type='password']", self.password)
+        print("Filling partner login form...")
+        # パートナーログインフォームを明示的に指定
+        page.fill("#formPartnerId", self.username)
+        page.fill("#formPartnerPassword", self.password)
 
         print("Clicking login button...")
-        page.click("input[type='submit'], button[type='submit']")
-        page.wait_for_timeout(5000)
+        # パートナーフォームの送信ボタンをクリック
+        page.locator("form:has(#formPartnerId) button[type='submit']").click()
+        page.wait_for_timeout(8000)
 
         # ポップアップを閉じる
-        page.keyboard.press("Escape")
-        page.wait_for_timeout(1000)
+        try:
+            page.keyboard.press("Escape")
+            page.wait_for_timeout(1000)
+        except:
+            pass
 
         # ログイン成功判定
-        if page.locator("text=ログアウト").count() > 0 or page.locator("text=マイページ").count() > 0:
+        print("Checking login success...")
+        if page.locator("text=ログアウト").count() > 0 or page.locator("text=マイページ").count() > 0 or page.url != self.LOGIN_URL:
+            print("Login successful")
             return True
 
+        print("Login failed")
         return False
 
     def _parse_amount(self, text: str) -> int:

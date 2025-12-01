@@ -25,20 +25,26 @@ class AffitownScraper(BaseScraper):
     def login(self, page: Page) -> bool:
         """ログイン処理"""
         print(f"Navigating to {self.LOGIN_URL}...")
-        page.goto(self.LOGIN_URL)
-        page.wait_for_timeout(2000)
+        page.goto(self.LOGIN_URL, timeout=60000)
+        page.wait_for_timeout(3000)
 
-        print("Filling login form...")
-        page.fill("form[action='/partner/login/confirm'] input[name='loginId']", self.username)
-        page.fill("form[action='/partner/login/confirm'] input[name='password']", self.password)
-        page.click("form[action='/partner/login/confirm'] input[type='submit']")
-        page.wait_for_timeout(5000)
+        print("Filling partner login form...")
+        # パートナーログインフォームを明示的に指定
+        partner_form = page.locator("form[action='/partner/login/confirm']").first
+        partner_form.locator("input[name='loginId']").fill(self.username)
+        partner_form.locator("input[name='password']").fill(self.password)
+
+        print("Clicking login button...")
+        partner_form.locator("input[type='submit']").click()
+        page.wait_for_timeout(8000)
 
         # ログイン成功判定
-        if "login" in page.url.lower():
+        print("Checking login success...")
+        if "login" in page.url.lower() and "confirm" not in page.url.lower():
+            print("Login failed - still on login page")
             return False
 
-        print("Logged in successfully")
+        print("Login successful")
         return True
 
     def _parse_amount(self, text: str) -> int:

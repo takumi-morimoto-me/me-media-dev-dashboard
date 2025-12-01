@@ -20,23 +20,30 @@ class MoshimoScraper(BaseScraper):
 
     def login(self, page: Page) -> bool:
         """もしもアフィリエイトにログイン"""
-        page.goto(self.login_url or 'https://af.moshimo.com/af/shop/index', wait_until='domcontentloaded')
-        self.human_delay(1000, 2000)
+        login_url = self.login_url or 'https://af.moshimo.com/af/shop/index'
+        print(f"Navigating to {login_url}...")
+        page.goto(login_url, timeout=60000)
+        page.wait_for_timeout(3000)
 
+        print("Filling login form...")
         # フォーム入力
         page.fill('input[name="account"]', self.username)
         self.human_delay(300, 500)
         page.fill('input[name="password"]', self.password)
         self.human_delay(300, 500)
 
-        # ログインボタン
-        page.click('input[name="login"]')
-        page.wait_for_timeout(5000)
+        print("Clicking login button...")
+        # ログインボタン（input[type="submit"]を使用）
+        page.click('input[type="submit"]')
+        page.wait_for_timeout(8000)
 
         # ログイン確認
-        if 'login' in page.url and 'shop/index' not in page.url:
+        print("Checking login success...")
+        if 'login' in page.url and 'shop' not in page.url:
+            print("Login failed - still on login page")
             return False
 
+        print("Login successful")
         return True
 
     def scrape_daily(self, page: Page) -> List[Dict[str, Any]]:

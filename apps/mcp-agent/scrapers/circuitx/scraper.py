@@ -23,19 +23,25 @@ class CircuitxScraper(BaseScraper):
     def login(self, page: Page) -> bool:
         """ログイン処理"""
         print(f"Navigating to {self.LOGIN_URL}...")
-        page.goto(self.LOGIN_URL)
+        page.goto(self.LOGIN_URL, timeout=60000)
         page.wait_for_timeout(3000)
 
         print("Filling login form...")
-        page.fill("input[type='email'], input[name='email']", self.username)
-        page.fill("input[type='password']", self.password)
-        page.click("button[type='submit'], button:has-text('ログイン')")
-        page.wait_for_timeout(5000)
+        # 正確なセレクタを使用
+        page.fill("#general_user_mail", self.username)
+        page.fill("#general_user_password", self.password)
+
+        print("Clicking login button...")
+        page.click("input[name='commit']")
+        page.wait_for_timeout(8000)
 
         # ログイン成功判定
-        if "dashboard" in page.url.lower() or page.locator("text=レポート").count() > 0:
+        print("Checking login success...")
+        if "login" not in page.url.lower() or page.locator("text=レポート").count() > 0 or page.locator("text=ログアウト").count() > 0:
+            print("Login successful")
             return True
 
+        print("Login failed")
         return False
 
     def _parse_amount(self, text: str) -> int:
