@@ -52,6 +52,7 @@ class CircuitxScraper(BaseScraper):
     def _extract_table_data(self, page: Page) -> List[Dict[str, Any]]:
         """テーブルからデータを抽出"""
         records = []
+        current_year = datetime.now().year
 
         rows = page.locator("table tbody tr").all()
         print(f"Found {len(rows)} table rows")
@@ -62,23 +63,39 @@ class CircuitxScraper(BaseScraper):
                 continue
 
             date_text = cells[0].inner_text().strip()
-            amount_text = cells[-1].inner_text().strip()
 
-            if '合計' in date_text:
+            if '合計' in date_text or '平均' in date_text:
                 continue
 
-            # 日付の解析
+            # 日付の解析（複数フォーマット対応）- まず日付かどうか判定
+            date_str = None
+
+            # パターン1: 2025/12/01(月) or 2024年11月01日 or 2024-11-01
             match = re.match(r'(\d{4})[年/-](\d{1,2})[月/-](\d{1,2})', date_text)
             if match:
                 y, m, d = match.groups()
                 date_str = f"{y}-{int(m):02d}-{int(d):02d}"
-                amount = self._parse_amount(amount_text)
 
-                if amount > 0:
-                    records.append({
-                        'date': date_str,
-                        'amount': amount,
-                    })
+            # パターン2: 11月01日 or 11/01 (年なし)
+            if not date_str:
+                match = re.match(r'(\d{1,2})[月/](\d{1,2})', date_text)
+                if match:
+                    m, d = match.groups()
+                    date_str = f"{current_year}-{int(m):02d}-{int(d):02d}"
+
+            # 日付行でない場合はスキップ（メディア名などの集計行）
+            if not date_str:
+                continue
+
+            # 金額は最後のカラム
+            amount_text = cells[-1].inner_text().strip()
+            amount = self._parse_amount(amount_text)
+
+            print(f"    -> {date_str}: ¥{amount:,}")
+            records.append({
+                'date': date_str,
+                'amount': amount,
+            })
 
         return records
 

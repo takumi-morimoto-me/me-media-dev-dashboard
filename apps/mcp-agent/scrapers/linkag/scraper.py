@@ -36,13 +36,23 @@ class LinkagScraper(BaseScraper):
         partner_form.locator("input[name='commit']").click()
         page.wait_for_timeout(8000)
 
-        # ログイン成功判定
+        # ログイン失敗判定（エラーメッセージがあれば失敗）
         print("Checking login success...")
-        if page.locator("text=ログアウト").count() > 0 or page.locator("text=レポート").count() > 0 or "partner" in page.url:
+        if page.locator("text=ログインに失敗").count() > 0:
+            print("Login failed - error message detected")
+            return False
+
+        # ログイン成功判定（ログアウトリンクが表示されていれば成功）
+        if page.locator("text=ログアウト").count() > 0:
             print("Login successful")
             return True
 
-        print("Login failed")
+        # ダッシュボードに遷移していれば成功
+        if "/partner/" in page.url and "login" not in page.url.lower():
+            print("Login successful - redirected to dashboard")
+            return True
+
+        print("Login failed - could not verify success")
         return False
 
     def _parse_amount(self, text: str) -> int:
