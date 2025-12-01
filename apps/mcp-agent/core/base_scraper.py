@@ -377,9 +377,10 @@ class BaseScraper(ABC):
         if not enriched_records:
             return 0
 
-        # 既存データを削除（今年分）
-        start_date = "2025-01-01"
-        end_date = datetime.now().strftime('%Y-%m-%d')
+        # 取得したデータの日付範囲を計算
+        dates = [r['date'] for r in enriched_records]
+        start_date = min(dates)
+        end_date = max(dates)
 
         print(f"Deleting existing records from {start_date} to {end_date}...")
         try:

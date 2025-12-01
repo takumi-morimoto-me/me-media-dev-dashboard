@@ -120,11 +120,13 @@ class A8netScraper(BaseScraper):
 
         for row in rows:
             cells = row.locator("td").all()
-            if len(cells) < 2:
+            if len(cells) < 3:
                 continue
 
             month_text = cells[0].inner_text().strip()
-            amount_text = cells[-1].inner_text().strip()
+            # 確定報酬額・税込は3番目のカラム（index 2）
+            # テーブル構造: 年月 | 確定件数 | 確定報酬額・税込 | 確定報酬額・税別 | 確定報酬額・税金
+            amount_text = cells[2].inner_text().strip()
 
             if '合計' in month_text:
                 continue
@@ -136,11 +138,11 @@ class A8netScraper(BaseScraper):
                 date_str = f"{y}-{int(m):02d}-01"
                 amount = self._parse_amount(amount_text)
 
-                if amount > 0:
-                    records.append({
-                        'date': date_str,
-                        'amount': amount,
-                    })
+                records.append({
+                    'date': date_str,
+                    'amount': amount,
+                })
+                print(f"  {y}年{m}月: {amount:,}円")
 
         return records
 
