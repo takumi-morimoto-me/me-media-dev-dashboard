@@ -9,7 +9,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import React, { useMemo, useState } from "react";
+import { Input } from "@/components/ui/input";
+import React, { useMemo, useState, useCallback } from "react";
 import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -37,17 +38,87 @@ interface AggregatedData {
   };
 }
 
+type DisplayUnit = 'monthly' | 'weekly' | 'daily';
+
 interface FinancialsTableProps {
   headers: Header[];
   rows: AccountItemRow[];
   data: AggregatedData;
   viewMode?: 'all' | 'budget' | 'actual';
   onDataChange?: () => void;
+  mediaId?: string;
+  displayUnit?: DisplayUnit;
 }
 
 const formatNumber = (num: number) => new Intl.NumberFormat('ja-JP').format(num);
 
-const DataRow: React.FC<{ 
+// Editable Cell Component
+const EditableCell: React.FC<{
+  value: number;
+  isEditable: boolean;
+  onSave: (newValue: number) => Promise<void>;
+  className?: string;
+}> = ({ value, isEditable, onSave, className }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value.toString());
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleDoubleClick = () => {
+    if (isEditable) {
+      setIsEditing(true);
+      setEditValue(value.toString());
+    }
+  };
+
+  const handleSave = async () => {
+    const newValue = parseInt(editValue.replace(/,/g, ''), 10) || 0;
+    if (newValue !== value) {
+      setIsSaving(true);
+      try {
+        await onSave(newValue);
+      } finally {
+        setIsSaving(false);
+      }
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+      setEditValue(value.toString());
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <Input
+        type="text"
+        value={editValue}
+        onChange={(e) => setEditValue(e.target.value)}
+        onBlur={handleSave}
+        onKeyDown={handleKeyDown}
+        className="h-6 w-20 text-right font-mono text-xs p-1"
+        autoFocus
+        disabled={isSaving}
+      />
+    );
+  }
+
+  return (
+    <span
+      onDoubleClick={handleDoubleClick}
+      className={`${isEditable ? 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 px-1 rounded' : ''} ${className || ''}`}
+      title={isEditable ? 'ダブルクリックで編集' : undefined}
+    >
+      {formatNumber(value)}
+    </span>
+  );
+};
+
+const DataRow: React.FC<{
   item: AccountItemRow;
   headers: Header[];
   data: AggregatedData;
@@ -59,13 +130,21 @@ const DataRow: React.FC<{
   toggleItemSelection: (id: string) => void;
   handleDeleteItem: (id: string, name: string) => void;
   isDeleting: boolean;
-}> = ({ item, headers, data, viewMode, level, expandedRows, toggleRow, selectedItems, toggleItemSelection, handleDeleteItem, isDeleting }) => {
+  mediaId?: string;
+  displayUnit?: DisplayUnit;
+  onCellSave?: (itemId: string, headerKey: string, type: 'budget' | 'actual', value: number) => Promise<void>;
+}> = ({ item, headers, data, viewMode, level, expandedRows, toggleRow, selectedItems, toggleItemSelection, handleDeleteItem, isDeleting, mediaId, displayUnit, onCellSave }) => {
   const isExpanded = expandedRows.has(item.id);
+
+  // Check if this item is editable (not affiliate-related and has no children)
+  const isAffiliate = item.name.includes('アフィリエイト');
+  const hasChildren = item.children.length > 0;
+  const isEditable = !isAffiliate && !hasChildren && mediaId && mediaId !== 'all';
 
   return (
     <React.Fragment>
       <TableRow className={level === 0 ? "font-bold bg-muted hover:bg-muted/90" : "hover:bg-muted/50"}>
-        <TableCell 
+        <TableCell
           className={`sticky left-0 z-10 whitespace-nowrap ${level === 0 ? 'bg-muted' : 'bg-background'}`}
           style={{ paddingLeft: `${1 + level * 1.5}rem` }}
         >
@@ -100,13 +179,37 @@ const DataRow: React.FC<{
           const difference = actual - budget;
           const achievementRate = budget === 0 ? 0 : (actual / budget) * 100;
 
+          const handleBudgetSave = async (newValue: number) => {
+            if (onCellSave) {
+              await onCellSave(item.id, header.key, 'budget', newValue);
+            }
+          };
+
+          const handleActualSave = async (newValue: number) => {
+            if (onCellSave) {
+              await onCellSave(item.id, header.key, 'actual', newValue);
+            }
+          };
+
           return (
             <React.Fragment key={header.key}>
               {(viewMode === 'all' || viewMode === 'budget') && (
-                <TableCell className="text-right font-mono border-l whitespace-nowrap px-2">{formatNumber(budget)}</TableCell>
+                <TableCell className="text-right font-mono border-l whitespace-nowrap px-2">
+                  <EditableCell
+                    value={budget}
+                    isEditable={!!isEditable}
+                    onSave={handleBudgetSave}
+                  />
+                </TableCell>
               )}
               {(viewMode === 'all' || viewMode === 'actual') && (
-                <TableCell className={`text-right font-mono whitespace-nowrap px-2 ${viewMode === 'actual' ? 'border-l' : ''}`}>{formatNumber(actual)}</TableCell>
+                <TableCell className={`text-right font-mono whitespace-nowrap px-2 ${viewMode === 'actual' ? 'border-l' : ''}`}>
+                  <EditableCell
+                    value={actual}
+                    isEditable={!!isEditable}
+                    onSave={handleActualSave}
+                  />
+                </TableCell>
               )}
               {viewMode === 'all' && (
                 <>
@@ -132,6 +235,9 @@ const DataRow: React.FC<{
           toggleItemSelection={toggleItemSelection}
           handleDeleteItem={handleDeleteItem}
           isDeleting={isDeleting}
+          mediaId={mediaId}
+          displayUnit={displayUnit}
+          onCellSave={onCellSave}
         />
       ))}
     </React.Fragment>
@@ -144,10 +250,65 @@ export default function FinancialsTable({
   data,
   viewMode = 'all',
   onDataChange,
+  mediaId,
+  displayUnit = 'monthly',
 }: FinancialsTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(() => new Set(rows.map(r => r.id)));
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Parse header key to get date information
+  const parseHeaderKeyToDate = useCallback((headerKey: string): string => {
+    // headerKey format: 'm-YYYY-MM' for monthly, 'w-YYYY-WW' for weekly, 'd-YYYY-MM-DD' for daily
+    if (headerKey.startsWith('m-')) {
+      const [, year, month] = headerKey.split('-');
+      return `${year}-${month.padStart(2, '0')}-01`;
+    } else if (headerKey.startsWith('d-')) {
+      return headerKey.substring(2); // Remove 'd-' prefix
+    } else if (headerKey.startsWith('w-')) {
+      // For weekly, return the first day of the week
+      const [, year, week] = headerKey.split('-');
+      // Simple approximation: week 1 = Jan 1-7, etc.
+      const d = new Date(parseInt(year), 0, 1 + (parseInt(week) - 1) * 7);
+      return d.toISOString().split('T')[0];
+    }
+    return headerKey;
+  }, []);
+
+  const handleCellSave = useCallback(async (itemId: string, headerKey: string, type: 'budget' | 'actual', value: number) => {
+    if (!mediaId || mediaId === 'all') {
+      toast.error('メディアを選択してください');
+      return;
+    }
+
+    const date = parseHeaderKeyToDate(headerKey);
+
+    try {
+      const response = await fetch('/api/financials/update-cell', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountItemId: itemId,
+          mediaId,
+          date,
+          amount: value,
+          type,
+          displayUnit,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save');
+      }
+
+      toast.success('保存しました');
+      onDataChange?.();
+    } catch (error) {
+      console.error('Cell save error:', error);
+      toast.error('保存に失敗しました');
+    }
+  }, [mediaId, displayUnit, onDataChange, parseHeaderKeyToDate]);
 
   const allItemIds = useMemo(() => {
     const ids = new Set<string>();
@@ -279,6 +440,9 @@ export default function FinancialsTable({
               toggleItemSelection={toggleItemSelection}
               handleDeleteItem={handleDeleteItem}
               isDeleting={isDeleting}
+              mediaId={mediaId}
+              displayUnit={displayUnit}
+              onCellSave={handleCellSave}
             />
           ))}
         </TableBody>

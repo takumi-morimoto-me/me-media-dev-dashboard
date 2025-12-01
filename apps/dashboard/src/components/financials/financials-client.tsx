@@ -526,6 +526,8 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
           data={tableData.data}
           viewMode={viewMode}
           onDataChange={handleImportComplete}
+          mediaId={mediaId}
+          displayUnit={displayUnit}
         />
       </div>
 
