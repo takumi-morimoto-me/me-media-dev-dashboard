@@ -70,11 +70,20 @@ export default async function DashboardLayout({
     console.log("Media count:", mediaResult.data?.length || 0)
     console.log("ASPs count:", aspsResult.data?.length || 0)
     console.log("Credentials count:", credentialsResult.data?.length || 0)
+    if (mediaResult.error) {
+      console.error("Media error:", JSON.stringify(mediaResult.error, null, 2))
+    }
     if (aspsResult.error) {
       console.error("ASPs error:", JSON.stringify(aspsResult.error, null, 2))
     }
     if (credentialsResult.error) {
       console.error("Credentials error:", JSON.stringify(credentialsResult.error, null, 2))
+    }
+    // 詳細デバッグ: 最初のメディアを表示
+    if (mediaResult.data && mediaResult.data.length > 0) {
+      console.log("First media:", JSON.stringify(mediaResult.data[0]))
+    } else {
+      console.log("No media data returned!")
     }
 
     // slugがnullの場合は空文字にする
