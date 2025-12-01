@@ -41,6 +41,7 @@ interface AspsTableProps {
   onDelete?: (asp: AspWithCredentials) => void
   onBulkDelete?: (aspIds: string[]) => void
   onUrlUpdate?: (aspId: string, newUrl: string) => Promise<void>
+  onNameUpdate?: (aspId: string, newName: string) => Promise<void>
   onActiveToggle?: (aspId: string, isActive: boolean) => Promise<void>
 }
 
@@ -52,6 +53,7 @@ export function AspsTable({
   onDelete,
   onBulkDelete,
   onUrlUpdate,
+  onNameUpdate,
   onActiveToggle,
 }: AspsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
@@ -98,6 +100,7 @@ export function AspsTable({
     onEdit,
     onDelete,
     onUrlUpdate,
+    onNameUpdate,
     onActiveToggle,
   })
 

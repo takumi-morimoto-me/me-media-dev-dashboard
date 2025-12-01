@@ -105,6 +105,18 @@ export function AgentClient() {
     }
   };
 
+  // サービス名更新ハンドラ
+  const handleNameUpdate = async (aspId: string, newName: string) => {
+    const result = await updateAsp(aspId, { name: newName });
+
+    if (result.error) {
+      toast.error(result.error);
+      throw new Error(result.error);
+    } else {
+      toast.success("サービス名を更新しました");
+    }
+  };
+
   // 稼働状況トグルハンドラ
   const handleActiveToggle = async (aspId: string, isActive: boolean) => {
     const result = await updateAsp(aspId, { is_active: isActive });
@@ -135,6 +147,7 @@ export function AgentClient() {
           onDelete={handleDelete}
           onBulkDelete={handleBulkDelete}
           onUrlUpdate={handleUrlUpdate}
+          onNameUpdate={handleNameUpdate}
           onActiveToggle={handleActiveToggle}
         />
       </div>
