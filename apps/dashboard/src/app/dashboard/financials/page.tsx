@@ -48,11 +48,11 @@ export default async function FinancialsPage({ searchParams }: FinancialsPagePro
   const accountItemsPromise = mediaId
     ? supabase
         .from('account_items')
-        .select('id, name, parent_id, display_order')
+        .select('id, name, parent_id, display_order, media_id')
         .eq('media_id', mediaId)
     : supabase
         .from('account_items')
-        .select('id, name, parent_id, display_order');
+        .select('id, name, parent_id, display_order, media_id, media:media_id(name)');
 
   const [
     { data: setting, error: settingError },

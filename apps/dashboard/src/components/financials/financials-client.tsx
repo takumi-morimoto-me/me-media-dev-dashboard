@@ -48,6 +48,8 @@ interface AccountItem {
   name: string;
   parent_id: string | null;
   display_order: number;
+  media_id?: string;
+  media?: { name: string } | { name: string }[] | null;
 }
 
 interface ClientAccountItem extends AccountItem {
@@ -136,6 +138,39 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
     });
     rootItems.forEach(r => r.children.sort((a, b) => a.display_order - b.display_order));
     rootItems.sort((a, b) => a.display_order - b.display_order);
+
+    // Helper to get media name from either object or array
+    const getMediaName = (media: AccountItem['media']): string => {
+      if (!media) return '不明';
+      if (Array.isArray(media)) return media[0]?.name || '不明';
+      return media.name || '不明';
+    };
+
+    // When viewing all media, group by media
+    let finalRootItems: ClientAccountItem[] = rootItems;
+    if (mediaId === 'all') {
+      // Group root items by media
+      const mediaGroups = new Map<string, { name: string; items: ClientAccountItem[] }>();
+      rootItems.forEach(item => {
+        const mediaName = getMediaName(item.media);
+        const mediaKey = item.media_id || 'unknown';
+        if (!mediaGroups.has(mediaKey)) {
+          mediaGroups.set(mediaKey, { name: mediaName, items: [] });
+        }
+        mediaGroups.get(mediaKey)!.items.push(item);
+      });
+
+      // Create virtual media group items
+      finalRootItems = Array.from(mediaGroups.entries()).map(([key, group]) => ({
+        id: `media-group-${key}`,
+        name: group.name,
+        parent_id: null,
+        display_order: 0,
+        media_id: key,
+        children: group.items.map(item => ({ ...item, parent_id: `media-group-${key}` })),
+      }));
+      finalRootItems.sort((a, b) => a.name.localeCompare(b.name));
+    }
 
     const dataByItemId = dailyData.reduce((acc, day) => {
       if (!acc[day.account_item_id]) acc[day.account_item_id] = [];
@@ -254,9 +289,30 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
       });
     }
 
-    return { headers, rows: rootItems, data: aggregatedData };
+    // If viewing all media, aggregate data for media group items
+    if (mediaId === 'all') {
+      finalRootItems.forEach(mediaGroup => {
+        aggregatedData[mediaGroup.id] = {};
+        headers.forEach(h => {
+          let totalBudget = 0;
+          let totalActual = 0;
+          // Only sum immediate children (root items like 売上, 費用)
+          // These already include their children's values, so no recursive traversal needed
+          mediaGroup.children.forEach(item => {
+            const itemData = aggregatedData[item.id]?.[h.key];
+            if (itemData) {
+              totalBudget += itemData.budget;
+              totalActual += itemData.actual;
+            }
+          });
+          aggregatedData[mediaGroup.id][h.key] = { budget: totalBudget, actual: totalActual };
+        });
+      });
+    }
 
-  }, [monthlyData, dailyData, accountItems, displayUnit, fiscalYearStartMonth, selectedYear]);
+    return { headers, rows: finalRootItems, data: aggregatedData };
+
+  }, [monthlyData, dailyData, accountItems, displayUnit, fiscalYearStartMonth, selectedYear, mediaId]);
 
   const aspTableData = useMemo(() => {
     // Extract unique ASPs (excluding "日次" suffix ASPs)

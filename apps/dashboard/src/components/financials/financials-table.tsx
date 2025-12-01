@@ -136,23 +136,29 @@ const DataRow: React.FC<{
 }> = ({ item, headers, data, viewMode, level, expandedRows, toggleRow, selectedItems, toggleItemSelection, handleDeleteItem, isDeleting, mediaId, displayUnit, onCellSave }) => {
   const isExpanded = expandedRows.has(item.id);
 
+  // Check if this is a virtual media group row
+  const isMediaGroup = item.id.startsWith('media-group-');
+
   // Check if this item is editable (not affiliate-related and has no children)
   const isAffiliate = item.name.includes('アフィリエイト');
   const hasChildren = item.children.length > 0;
-  const isEditable = !isAffiliate && !hasChildren && mediaId && mediaId !== 'all';
+  const isEditable = !isAffiliate && !hasChildren && mediaId && mediaId !== 'all' && !isMediaGroup;
 
   return (
     <React.Fragment>
-      <TableRow className={level === 0 ? "font-bold bg-muted hover:bg-muted/90" : "hover:bg-muted/50"}>
+      <TableRow className={isMediaGroup ? "font-bold bg-primary/10 hover:bg-primary/15" : level === 0 ? "font-bold bg-muted hover:bg-muted/90" : "hover:bg-muted/50"}>
         <TableCell
-          className={`sticky left-0 z-10 whitespace-nowrap ${level === 0 ? 'bg-muted' : 'bg-background'}`}
+          className={`sticky left-0 z-10 whitespace-nowrap ${isMediaGroup ? 'bg-primary/10' : level === 0 ? 'bg-muted' : 'bg-background'}`}
           style={{ paddingLeft: `${1 + level * 1.5}rem` }}
         >
           <div className="flex items-center gap-2">
-            <Checkbox
-              checked={selectedItems.has(item.id)}
-              onCheckedChange={() => toggleItemSelection(item.id)}
-            />
+            {!isMediaGroup && (
+              <Checkbox
+                checked={selectedItems.has(item.id)}
+                onCheckedChange={() => toggleItemSelection(item.id)}
+              />
+            )}
+            {isMediaGroup && <span className="w-4" />}
             {item.children.length > 0 ? (
               <Button variant="ghost" size="icon" onClick={() => toggleRow(item.id)} className="h-8 w-8">
                 {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -161,15 +167,17 @@ const DataRow: React.FC<{
               <span className="w-8 h-8" /> // Placeholder for alignment
             )}
             <span>{item.name}</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 opacity-60 hover:opacity-100"
-              onClick={() => handleDeleteItem(item.id, item.name)}
-              disabled={isDeleting}
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
+            {!isMediaGroup && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 opacity-60 hover:opacity-100"
+                onClick={() => handleDeleteItem(item.id, item.name)}
+                disabled={isDeleting}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
           </div>
         </TableCell>
         {headers.map(header => {
