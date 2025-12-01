@@ -68,6 +68,14 @@ interface FinancialsClientProps {
 type DisplayUnit = 'monthly' | 'weekly' | 'daily';
 type ViewMode = 'all' | 'budget' | 'actual';
 
+// ASP名からベース名を抽出するヘルパー関数（括弧とその中身を除去）
+const getAspBaseName = (name: string): string => {
+  return name
+    .replace(/[（(][^）)]*[）)]/g, '')  // Remove parentheses and content
+    .replace(/\s*=\s*\w+$/g, '')         // Remove " =A8app" suffixes
+    .trim();
+};
+
 // --- Date Helpers ---
 const getWeek = (d: Date) => {
   d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -315,8 +323,10 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
   }, [monthlyData, dailyData, accountItems, displayUnit, fiscalYearStartMonth, selectedYear, mediaId]);
 
   const aspTableData = useMemo(() => {
-    // Extract unique ASPs (excluding "日次" suffix ASPs)
+    // Extract unique ASPs (excluding "日次" suffix ASPs) and group by base name
     const aspMap = new Map<string, { asp_id: string; asp_name: string }>();
+    const aspBaseNameGroups = new Map<string, { asp_ids: string[]; asp_name: string }>();
+
     [...aspMonthlyData, ...aspDailyData].forEach(item => {
       // Skip ASPs with "日次" in their name (these are duplicates)
       if (item.asp_name.includes('日次')) return;
@@ -324,7 +334,24 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
         aspMap.set(item.asp_id, { asp_id: item.asp_id, asp_name: item.asp_name });
       }
     });
-    const rows = Array.from(aspMap.values()).sort((a, b) => a.asp_name.localeCompare(b.asp_name));
+
+    // Group ASPs by base name (e.g., "もしも（ビギナーズ）" -> "もしも")
+    aspMap.forEach(asp => {
+      const baseName = getAspBaseName(asp.asp_name);
+      if (!aspBaseNameGroups.has(baseName)) {
+        aspBaseNameGroups.set(baseName, { asp_ids: [], asp_name: baseName });
+      }
+      aspBaseNameGroups.get(baseName)!.asp_ids.push(asp.asp_id);
+    });
+
+    // Use grouped rows for display (asp_id will be the base name for grouped ASPs)
+    const rows = Array.from(aspBaseNameGroups.values())
+      .map(group => ({
+        asp_id: group.asp_ids.join(','),  // Combine IDs for lookup
+        asp_name: group.asp_name,
+        asp_ids: group.asp_ids,  // Keep original IDs for data aggregation
+      }))
+      .sort((a, b) => a.asp_name.localeCompare(b.asp_name));
 
     const headers: { key: string; label: string }[] = [];
     const aggregatedData: { [aspId: string]: { [headerKey: string]: number } } = {};
@@ -354,7 +381,8 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
           const [, yearStr, monthStr] = h.key.split('-');
           const year = parseInt(yearStr);
           const month = parseInt(monthStr);
-          const monthData = aspMonthlyData.filter(d => d.asp_id === asp.asp_id && d.item_month === month && d.item_year === year);
+          // Aggregate data from all ASP IDs in this group
+          const monthData = aspMonthlyData.filter(d => asp.asp_ids.includes(d.asp_id) && d.item_month === month && d.item_year === year);
           aggregatedData[asp.asp_id][h.key] = monthData.reduce((sum, d) => sum + d.actual, 0);
         });
       });
@@ -381,8 +409,9 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
           const [, year, week] = h.key.split('-').map(Number);
           const startOfWeek = getStartOfWeek(year, week);
           const endOfWeek = getEndOfWeek(year, week);
+          // Aggregate data from all ASP IDs in this group
           const weekData = aspDailyData.filter(d => {
-            if (d.asp_id !== asp.asp_id) return false;
+            if (!asp.asp_ids.includes(d.asp_id)) return false;
             const itemDate = new Date(d.item_date);
             return itemDate >= startOfWeek && itemDate <= endOfWeek;
           });
@@ -404,7 +433,8 @@ export default function FinancialsClient({ monthlyData, dailyData, aspMonthlyDat
         aggregatedData[asp.asp_id] = {};
         headers.forEach(h => {
           const dateKey = h.key.substring(2);
-          const dayData = aspDailyData.filter(d => d.asp_id === asp.asp_id && d.item_date === dateKey);
+          // Aggregate data from all ASP IDs in this group
+          const dayData = aspDailyData.filter(d => asp.asp_ids.includes(d.asp_id) && d.item_date === dateKey);
           aggregatedData[asp.asp_id][h.key] = dayData.reduce((sum, d) => sum + d.actual, 0);
         });
       });
