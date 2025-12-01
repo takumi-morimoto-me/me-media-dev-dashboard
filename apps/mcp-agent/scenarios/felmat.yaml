@@ -10,7 +10,7 @@ credentials:
 
 # 月次データ取得シナリオ
 monthly:
-  description: "月別レポートから報酬合計（税込）を取得"
+  description: "月別レポートから発生報酬（税抜）を取得"
   actions:
     - action: navigate
       value: https://www.felmat.net/publisher/login
@@ -58,20 +58,20 @@ monthly:
     # スクリーンショットを撮る
     - action: screenshot
       path: "/tmp/felmat_monthly.png"
-    # テーブルからデータ抽出（報酬合計（税込）カラムを指定）
+    # テーブルからデータ抽出（発生報酬（税抜）カラムを指定）
     - action: extract
       selector: "table"
       target: actuals
-      amount_column_pattern: "税込"
+      amount_column_pattern: "発生報酬"
       columns:
         - name: month
           selector: "td:nth-child(1)"
         - name: amount
-          selector: "td:last-child"
+          selector: "td:nth-child(6)"
 
 # 日次データ取得シナリオ
 daily:
-  description: "日別レポートから報酬合計（税抜）を取得"
+  description: "日別レポートから発生報酬（税抜）を取得"
   actions:
     - action: navigate
       value: https://www.felmat.net/publisher/login
@@ -100,7 +100,12 @@ daily:
       selector: "a:has-text('日別')"
     - action: wait
       milliseconds: 3000
-    # 検索ボタンをクリック（デフォルトで今月が選択されている）
+    # 前月ボタンをクリックして11月のデータを表示
+    - action: click
+      selector: "button:has-text('前月'), a:has-text('前月')"
+    - action: wait
+      milliseconds: 3000
+    # 検索ボタンをクリック
     - action: click
       selector: "button:has-text('上記条件で一覧を抽出'), input[type='submit']:has-text('抽出')"
     - action: wait
@@ -108,16 +113,16 @@ daily:
     # スクリーンショットを撮る
     - action: screenshot
       path: "/tmp/felmat_daily.png"
-    # テーブルからデータ抽出（報酬合計（税抜）カラムを指定）
+    # テーブルからデータ抽出（発生報酬（税抜）カラムを指定）
     - action: extract
       selector: "table"
       target: daily_actuals
-      amount_column_pattern: "税抜"
+      amount_column_pattern: "発生報酬"
       columns:
         - name: date
           selector: "td:nth-child(1)"
         - name: amount
-          selector: "td:last-child"
+          selector: "td:nth-child(6)"
 
 # リトライ設定
 retry:
