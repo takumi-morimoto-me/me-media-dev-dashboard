@@ -174,6 +174,37 @@ class SupabaseClient:
         """
         return self.save_monthly_actual(date, amount, media_id, account_item_id, asp_id)
 
+    def get_affiliate_account_item_id(self, media_id: str) -> Optional[str]:
+        """Get the 'アフィリエイト' account_item_id for a given media.
+
+        Args:
+            media_id: Media UUID
+
+        Returns:
+            Account item ID if found, None otherwise
+        """
+        try:
+            response = (
+                self.client.table("account_items")
+                .select("id")
+                .eq("media_id", media_id)
+                .ilike("name", "%アフィリエイト%")
+                .limit(1)
+                .execute()
+            )
+
+            if response.data:
+                account_item_id = response.data[0]["id"]
+                logger.info(f"Found account_item_id for media {media_id}: {account_item_id}")
+                return account_item_id
+            else:
+                logger.warning(f"No 'アフィリエイト' account_item found for media: {media_id}")
+                return None
+
+        except Exception as e:
+            logger.error(f"Error getting account_item_id: {e}")
+            return None
+
     def create_execution_log(
         self,
         asp_id: str,

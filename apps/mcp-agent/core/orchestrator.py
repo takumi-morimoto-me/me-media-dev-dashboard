@@ -122,6 +122,16 @@ class AgentLoop:
         # Store current ASP data and media_id for use in extract and secret resolution
         self.current_asp_data = asp_data
         self.current_media_id = media_id or "4d3d6a03-3cf2-41b9-a23c-4b2d75bafa12"  # Default to ReRe media
+
+        # Look up the correct account_item_id for this media
+        account_item_id = self.supabase.get_affiliate_account_item_id(self.current_media_id)
+        if account_item_id:
+            self.current_asp_data["account_item_id"] = account_item_id
+        else:
+            # Fallback to ReRe's account_item_id if lookup fails
+            self.current_asp_data["account_item_id"] = "a6df5fab-2df4-4263-a888-ab63348cccd5"
+            logger.warning(f"Using fallback account_item_id for media: {self.current_media_id}")
+
         asp_id = asp_data.get("id")
 
         # Create execution log
