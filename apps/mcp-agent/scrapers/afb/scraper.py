@@ -19,7 +19,7 @@ class AfbScraper(BaseScraper):
     """afb スクレイパー"""
 
     LOGIN_URL = 'https://www.afi-b.com/'
-    DAILY_REPORT_URL = 'https://www.afi-b.com/pa/report/?r=daily'
+    DAILY_REPORT_URL = 'https://www.afi-b.com/pa/report/?r=daily#tab_btn_top'
 
     def login(self, page: Page) -> bool:
         """ログイン処理"""
@@ -62,58 +62,114 @@ class AfbScraper(BaseScraper):
         """テーブルからデータを抽出"""
         records = []
 
-        rows = page.locator("table tbody tr").all()
-        print(f"Found {len(rows)} table rows")
+        # Find the report data table (contains "年月日" header and many rows)
+        all_tables = page.locator("table").all()
+        report_table = None
+
+        for table in all_tables:
+            rows = table.locator("tr").all()
+            if len(rows) > 30:  # Data table has many rows
+                html = table.inner_html()
+                if '年月日' in html:
+                    report_table = table
+                    print(f"Found report table with {len(rows)} rows")
+                    break
+
+        if not report_table:
+            print("Report table not found!")
+            return records
+
+        rows = report_table.locator("tr").all()
+        print(f"Found {len(rows)} table rows in report table")
 
         for row in rows:
             cells = row.locator("td").all()
-            if len(cells) < 2:
+            if len(cells) < 8:
+                continue
+
+            row_text = row.inner_text()
+
+            # Only process "合計" rows (skip TEL-only rows)
+            if '合計' not in row_text:
                 continue
 
             date_text = cells[0].inner_text().strip()
-            amount_text = cells[-1].inner_text().strip()
 
-            if '合計' in date_text:
+            # Skip header or summary rows
+            if '合計' in date_text or date_text == '-':
                 continue
 
             # 日付の解析
             match = re.match(r'(\d{4})[年/-](\d{1,2})[月/-](\d{1,2})', date_text)
-            if match:
-                y, m, d = match.groups()
-                date_str = f"{y}-{int(m):02d}-{int(d):02d}"
-                amount = self._parse_amount(amount_text)
+            if not match:
+                continue
 
-                if amount > 0:
-                    records.append({
-                        'date': date_str,
-                        'amount': amount,
-                    })
+            y, m, d = match.groups()
+            date_str = f"{y}-{int(m):02d}-{int(d):02d}"
+
+            # Extract data from cells
+            # Structure: 年月日, 曜日, Dev(合計/TEL), 表示回数, Click数, Click報酬, CTR, 発生数, 発生報酬, ...
+            try:
+                clicks = self._parse_amount(cells[4].inner_text())  # Click数
+                acquisitions = self._parse_amount(cells[7].inner_text())  # 発生数
+                amount = self._parse_amount(cells[8].inner_text())  # 発生報酬
+
+                records.append({
+                    'date': date_str,
+                    'amount': amount,  # Required by BaseScraper
+                    'clicks': clicks,
+                    'acquisitions': acquisitions,
+                })
+            except (IndexError, ValueError) as e:
+                print(f"Error parsing row for {date_str}: {e}")
+                continue
 
         return records
 
     def scrape_daily(self, page: Page) -> List[Dict[str, Any]]:
         """日次データのスクレイピング"""
         print("Navigating to daily report...")
-        page.goto(self.DAILY_REPORT_URL)
-        page.wait_for_timeout(3000)
+        page.goto(self.DAILY_REPORT_URL, timeout=60000, wait_until="domcontentloaded")
+        page.wait_for_timeout(5000)
 
-        # 日別タブをクリック
+        # Select 30 day span radio button
+        print("Setting 30 day span...")
         try:
-            page.click("a[href*='#tab_btn_top'][title='日別レポート'], #tab_btn_top a:has-text('日別')")
-            page.wait_for_timeout(2000)
-        except:
-            print("Daily tab click failed, continuing...")
+            thirty_day_radio = page.locator("form[action*='r=daily'] input[name='span'][value='30d']").first
+            if thirty_day_radio.count() > 0:
+                thirty_day_radio.check()
+                print("Selected 30 day span")
+            page.wait_for_timeout(1000)
+        except Exception as e:
+            print(f"Span selection failed: {e}")
 
-        # レポート表示ボタンをクリック
+        # Click the send button (type='image' with name='send')
+        print("Clicking send button...")
         try:
-            page.click("input[data-testid='daily-display-report'], input.send_report:visible")
-            page.wait_for_timeout(5000)
-        except:
-            print("Display report button click failed, continuing...")
+            send_btn = page.locator("form[action*='r=daily'] input[name='send'][type='image']").first
+            if send_btn.is_visible():
+                send_btn.click()
+            else:
+                # Fallback: JavaScript click
+                page.evaluate("""
+                    const forms = document.querySelectorAll('form[action*="r=daily"]');
+                    for (const form of forms) {
+                        const sendBtn = form.querySelector('input[name="send"]');
+                        if (sendBtn) {
+                            sendBtn.click();
+                            break;
+                        }
+                    }
+                """)
+            page.wait_for_timeout(10000)
+        except Exception as e:
+            print(f"Send button click failed: {e}")
 
-        # スクロール
-        page.evaluate("window.scrollBy(0, 500)")
-        page.wait_for_timeout(1000)
+        print(f"URL after submit: {page.url}")
+
+        # スクロール to show report
+        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        page.wait_for_timeout(2000)
 
         print("Extracting data from table...")
         records = self._extract_table_data(page)
