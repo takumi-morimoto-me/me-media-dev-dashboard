@@ -18,26 +18,31 @@ from core.base_scraper import BaseScraper
 class A8appScraper(BaseScraper):
     """A8app (SeedApp) スクレイパー"""
 
-    LOGIN_URL = 'https://www.a8.net/'
+    LOGIN_URL = 'https://admin.seedapp.jp/'
+    DAILY_REPORT_URL = 'https://admin.seedapp.jp/mo/reports/daily_reports/clear'
+    MONTHLY_REPORT_URL = 'https://admin.seedapp.jp/mo/reports/monthly_reports/clear'
 
     def login(self, page: Page) -> bool:
-        """ログイン処理（A8.netと同じ）"""
+        """ログイン処理"""
         print(f"Navigating to {self.LOGIN_URL}...")
-        page.goto(self.LOGIN_URL)
+        page.goto(self.LOGIN_URL, timeout=60000)
         page.wait_for_timeout(2000)
 
         print("Filling login form...")
-        page.fill("input[name='login'], input[type='text']:first-of-type", self.username)
-        page.fill("input[name='passwd'], input[type='password']", self.password)
+        page.fill('input[name="user[email]"]', self.username)
+        page.fill('input[name="user[password]"]', self.password)
 
         print("Clicking login button...")
-        page.click("input[type='submit'][value*='ログイン'], button:has-text('ログイン')")
-        page.wait_for_timeout(3000)
+        page.locator('input[type="submit"], button[type="submit"]').first.click()
+        page.wait_for_timeout(5000)
 
         # ログイン成功判定
-        if page.locator("text=マイページ").count() > 0 or page.locator("text=レポート").count() > 0:
+        print("Checking login success...")
+        if 'mo' in page.url or page.locator("text=ログアウト").count() > 0 or page.locator("text=ダッシュボード").count() > 0:
+            print("Login successful")
             return True
 
+        print("Login failed")
         return False
 
     def _parse_amount(self, text: str) -> int:
@@ -46,61 +51,133 @@ class A8appScraper(BaseScraper):
         return int(cleaned) if cleaned else 0
 
     def _extract_table_data(self, page: Page) -> List[Dict[str, Any]]:
-        """テーブルからデータを抽出"""
+        """テーブルからデータを抽出
+
+        テーブル構造:
+        - 日付 (index 0)
+        - クリック件数 (index 1)
+        - 成果件数 (index 2)
+        - 成果報酬額（税抜）(index 3)
+        - CVR (index 4)
+        - CPC (index 5)
+        """
         records = []
 
-        rows = page.locator("table tbody tr").all()
+        rows = page.locator("table tr").all()
         print(f"Found {len(rows)} table rows")
 
         for row in rows:
             cells = row.locator("td").all()
-            if len(cells) < 2:
+            if len(cells) < 4:
                 continue
 
             date_text = cells[0].inner_text().strip()
-            amount_text = cells[-1].inner_text().strip()
 
-            if '合計' in date_text:
+            # Skip header or summary rows
+            if '合計' in date_text or '日付' in date_text:
                 continue
 
-            # 日付の解析
-            match = re.match(r'(\d{4})[年/-](\d{1,2})[月/-](\d{1,2})', date_text)
-            if match:
-                y, m, d = match.groups()
-                date_str = f"{y}-{int(m):02d}-{int(d):02d}"
-                amount = self._parse_amount(amount_text)
+            # 日付の解析 (2025/11/02 format)
+            match = re.match(r'(\d{4})[年/](\d{1,2})[月/](\d{1,2})', date_text)
+            if not match:
+                continue
 
-                if amount > 0:
-                    records.append({
-                        'date': date_str,
-                        'amount': amount,
-                    })
+            y, m, d = match.groups()
+            date_str = f"{y}-{int(m):02d}-{int(d):02d}"
+
+            try:
+                clicks = self._parse_amount(cells[1].inner_text())  # クリック件数
+                acquisitions = self._parse_amount(cells[2].inner_text())  # 成果件数
+                amount = self._parse_amount(cells[3].inner_text())  # 成果報酬額（税抜）
+
+                records.append({
+                    'date': date_str,
+                    'amount': amount,  # Required by BaseScraper
+                    'clicks': clicks,
+                    'acquisitions': acquisitions,
+                })
+            except (IndexError, ValueError) as e:
+                print(f"Error parsing row for {date_str}: {e}")
+                continue
 
         return records
 
     def scrape_daily(self, page: Page) -> List[Dict[str, Any]]:
         """日次データのスクレイピング"""
-        # A8app/SeedAppへ移動
-        print("Navigating to A8app...")
-        page.goto("https://app.seedapp.jp/")
+        print("Navigating to daily report...")
+        page.goto(self.DAILY_REPORT_URL, timeout=60000)
         page.wait_for_timeout(3000)
 
-        # レポートへ移動
-        print("Navigating to reports...")
-        page.click("a:has-text('レポート'), text=レポート")
-        page.wait_for_timeout(2000)
-
-        page.click("a:has-text('日別'), text=日別")
-        page.wait_for_timeout(3000)
-
+        print(f"URL: {page.url}")
         print("Extracting data from table...")
         records = self._extract_table_data(page)
 
         return records
 
+    def _extract_monthly_table_data(self, page: Page) -> List[Dict[str, Any]]:
+        """月次テーブルからデータを抽出
+
+        テーブル構造:
+        - 年月 (index 0) - "2025年1月" format
+        - クリック件数 (index 1)
+        - 成果件数 (index 2)
+        - 成果報酬額（税抜）(index 3)
+        - CVR (index 4)
+        - CPC (index 5)
+        """
+        records = []
+
+        rows = page.locator("table tr").all()
+        print(f"Found {len(rows)} table rows")
+
+        for row in rows:
+            cells = row.locator("td").all()
+            if len(cells) < 4:
+                continue
+
+            date_text = cells[0].inner_text().strip()
+
+            # Skip header or summary rows
+            if '合計' in date_text or '年月' in date_text:
+                continue
+
+            # 年月の解析 (2025年1月 format)
+            match = re.match(r'(\d{4})年(\d{1,2})月', date_text)
+            if not match:
+                continue
+
+            y, m = match.groups()
+            # 月次データは月の初日として保存
+            date_str = f"{y}-{int(m):02d}-01"
+
+            try:
+                clicks = self._parse_amount(cells[1].inner_text())  # クリック件数
+                acquisitions = self._parse_amount(cells[2].inner_text())  # 成果件数
+                amount = self._parse_amount(cells[3].inner_text())  # 成果報酬額（税抜）
+
+                records.append({
+                    'date': date_str,
+                    'amount': amount,  # Required by BaseScraper
+                    'clicks': clicks,
+                    'acquisitions': acquisitions,
+                })
+            except (IndexError, ValueError) as e:
+                print(f"Error parsing row for {date_str}: {e}")
+                continue
+
+        return records
+
     def scrape_monthly(self, page: Page) -> List[Dict[str, Any]]:
         """月次データのスクレイピング"""
-        raise NotImplementedError("Monthly scraping not yet implemented for A8app")
+        print("Navigating to monthly report...")
+        page.goto(self.MONTHLY_REPORT_URL, timeout=60000)
+        page.wait_for_timeout(3000)
+
+        print(f"URL: {page.url}")
+        print("Extracting data from table...")
+        records = self._extract_monthly_table_data(page)
+
+        return records
 
 
 if __name__ == "__main__":
