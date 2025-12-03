@@ -110,31 +110,18 @@ export function getColumns(options?: GetColumnsOptions): ColumnDef<AspWithCreden
       header: "サービス名",
       cell: ({ row }) => {
         const cleanedName = cleanAspName(row.original.name)
-        const isAllMedia = !selectedMediaId
-        const mediaNames = row.original.credentials.map(c => c.media.name)
 
         return (
           <div className="max-w-[320px] overflow-hidden">
-            <div className="flex items-center gap-2">
-              <EditableNameCell
-                value={row.original.name}
-                displayValue={cleanedName}
-                onSave={async (newName) => {
-                  if (onNameUpdate) {
-                    await onNameUpdate(row.original.id, newName)
-                  }
-                }}
-              />
-              {isAllMedia && mediaNames.length > 0 && (
-                <div className="flex gap-1 flex-shrink-0">
-                  {mediaNames.map((name) => (
-                    <Badge key={name} variant="outline" className="text-[10px] px-1 py-0">
-                      {name}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
+            <EditableNameCell
+              value={row.original.name}
+              displayValue={cleanedName}
+              onSave={async (newName) => {
+                if (onNameUpdate) {
+                  await onNameUpdate(row.original.id, newName)
+                }
+              }}
+            />
           </div>
         )
       },
