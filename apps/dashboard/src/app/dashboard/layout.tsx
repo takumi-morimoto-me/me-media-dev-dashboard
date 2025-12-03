@@ -23,7 +23,6 @@ type Asp = {
   // 稼働状況
   is_active: boolean | null
   // reCAPTCHA関連
-  has_recaptcha: boolean | null
   recaptcha_status: string | null
   last_scrape_at: string | null
   last_scrape_status: string | null

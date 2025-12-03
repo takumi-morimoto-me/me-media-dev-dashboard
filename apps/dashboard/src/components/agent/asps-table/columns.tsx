@@ -5,16 +5,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { AspWithCredentials, RecaptchaStatus, ScrapeStatus } from "./constants"
 import { PasswordCell, EditableUrlCell, EditableNameCell } from "./cells"
-import { Shield, ShieldAlert, ShieldCheck, ShieldQuestion, ShieldX, CheckCircle2, XCircle, MinusCircle, Clock } from "lucide-react"
+import { Shield, ShieldAlert, ShieldCheck, ShieldQuestion, ShieldX } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-
-// スクレイピングステータスアイコンの設定
-const scrapeStatusIconConfig: Record<ScrapeStatus | 'unknown', { icon: typeof CheckCircle2; color: string; label: string }> = {
-  success: { icon: CheckCircle2, color: "text-green-500", label: "正常動作" },
-  failed: { icon: XCircle, color: "text-red-500", label: "取得失敗" },
-  partial: { icon: MinusCircle, color: "text-yellow-500", label: "一部成功" },
-  unknown: { icon: Clock, color: "text-gray-400", label: "未実行" },
-}
 
 // ASP名から（）とその中身を除去するヘルパー関数
 const cleanAspName = (name: string): string => {
@@ -120,27 +112,10 @@ export function getColumns(options?: GetColumnsOptions): ColumnDef<AspWithCreden
         const cleanedName = cleanAspName(row.original.name)
         const isAllMedia = !selectedMediaId
         const mediaNames = row.original.credentials.map(c => c.media.name)
-        const scrapeStatus = (row.original.last_scrape_status as ScrapeStatus | null) || 'unknown'
-        const scrapeNotes = row.original.scrape_notes
-        const statusConfig = scrapeStatusIconConfig[scrapeStatus as keyof typeof scrapeStatusIconConfig] || scrapeStatusIconConfig.unknown
-        const StatusIcon = statusConfig.icon
 
         return (
           <div className="max-w-[320px] overflow-hidden">
             <div className="flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <StatusIcon className={`h-4 w-4 flex-shrink-0 ${statusConfig.color}`} />
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <div className="text-sm">
-                    <p className="font-medium">{statusConfig.label}</p>
-                    {scrapeNotes && (
-                      <p className="text-xs text-muted-foreground mt-1 max-w-[200px]">{scrapeNotes}</p>
-                    )}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
               <EditableNameCell
                 value={row.original.name}
                 displayValue={cleanedName}
@@ -259,11 +234,11 @@ export function getColumns(options?: GetColumnsOptions): ColumnDef<AspWithCreden
       id: "recaptcha",
       header: "reCAPTCHA",
       cell: ({ row }) => {
-        const hasRecaptcha = row.original.has_recaptcha
         const status = row.original.recaptcha_status as RecaptchaStatus | null
         const notes = row.original.scrape_notes
 
-        if (!hasRecaptcha) {
+        // not_applicable または null の場合は「-」を表示
+        if (!status || status === 'not_applicable') {
           return (
             <div className="flex items-center justify-center">
               <span className="text-muted-foreground text-sm">-</span>
@@ -271,7 +246,7 @@ export function getColumns(options?: GetColumnsOptions): ColumnDef<AspWithCreden
           )
         }
 
-        const config = status ? recaptchaStatusConfig[status] : recaptchaStatusConfig.unknown
+        const config = recaptchaStatusConfig[status] || recaptchaStatusConfig.unknown
         const Icon = config.icon
 
         return (
