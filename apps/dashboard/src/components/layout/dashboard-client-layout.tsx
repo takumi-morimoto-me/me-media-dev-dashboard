@@ -13,7 +13,6 @@ type Asp = {
   id: string;
   name: string;
   login_url: string | null;
-  prompt: string | null;
   created_at: string;
   updated_at: string | null;
   category?: string | null;

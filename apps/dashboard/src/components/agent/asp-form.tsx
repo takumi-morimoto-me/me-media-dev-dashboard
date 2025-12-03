@@ -12,7 +12,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { aspFormSchema, type AspFormValues } from "@/lib/validations/asp";
 import { useState } from "react";
@@ -37,7 +36,6 @@ export function AspForm({ media, onSubmit, isPending, defaultValues }: AspFormPr
     defaultValues: {
       name: defaultValues?.name ?? "",
       login_url: defaultValues?.login_url ?? "",
-      prompt: defaultValues?.prompt ?? "",
       credentials: defaultValues?.credentials ?? [],
     },
   });
@@ -156,27 +154,6 @@ export function AspForm({ media, onSubmit, isPending, defaultValues }: AspFormPr
             })}
           </div>
         )}
-        <FormField
-          control={form.control}
-          name="prompt"
-          render={({ field }) => (
-            <FormItem className="space-y-3">
-              <FormLabel className="text-base">操作プロンプト</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="例:&#10;1. {login_url}にアクセスする&#10;2. ユーザー名フィールドに{SECRET:ASP_USERNAME}を入力&#10;3. パスワードフィールドに{SECRET:ASP_PASSWORD}を入力&#10;4. 「ログイン」ボタンをクリック&#10;5. 「レポート」メニューをクリック&#10;6. 「成果報酬」のテーブルから昨日の確定報酬額を取得"
-                  className="min-h-[300px] font-mono text-sm p-4"
-                  {...field}
-                />
-              </FormControl>
-              <p className="text-xs text-muted-foreground">
-                AIエージェントへの操作指示を自然言語で記述してください。
-                シークレット情報は {`{SECRET:KEY_NAME}`} 形式で記述します。
-              </p>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         <div className="flex justify-end pt-4">
           <Button type="submit" disabled={isPending} className="px-8">
             {isPending ? "保存中..." : "保存"}

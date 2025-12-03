@@ -11,7 +11,6 @@ export const aspCredentialSchema = z.object({
 export const aspFormSchema = z.object({
   name: z.string().min(1, { message: "ASP名は必須です。" }),
   login_url: z.string().url({ message: "有効なURLを入力してください。" }),
-  prompt: z.string(),
   credentials: z.array(aspCredentialSchema).min(1, { message: "少なくとも1つのメディアを選択してください。" }),
 });
 
@@ -19,7 +18,6 @@ export const aspFormSchema = z.object({
 export const aspUpdateSchema = z.object({
   name: z.string().min(1, { message: "ASP名は必須です。" }).optional(),
   login_url: z.string().url({ message: "有効なURLを入力してください。" }).optional(),
-  prompt: z.string().optional(),
   category: z.string().optional(),
   is_active: z.boolean().optional(),
 });

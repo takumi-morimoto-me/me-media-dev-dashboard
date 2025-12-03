@@ -45,9 +45,8 @@ export function CsvImportClient({ trigger }: CsvImportClientProps) {
         login_url: values[1] || '',
         username: values[2] || '',
         password: values[3] || '',
-        prompt: values[4] || '',
-        media_name: values[5] || '',
-        content_type: values[6] || '',
+        media_name: values[4] || '',
+        content_type: values[5] || '',
       });
     }
 
@@ -149,7 +148,7 @@ export function CsvImportClient({ trigger }: CsvImportClientProps) {
 
   // テンプレートダウンロード
   const handleDownloadTemplate = () => {
-    const template = 'name,login_url,username,password,prompt,media_name,content_type\n# 例: A8.net,https://www.a8.net/,testuser,testpass,A8.netのデータを取得,ReRe,article\n# 例: もしもアフィリエイト,https://af.moshimo.com/,,,もしものデータを取得,,video\n# 同じASP名で複数行を書くことで、複数メディアの認証情報を登録できます\n# content_typeは article または video を指定してください\n';
+    const template = 'name,login_url,username,password,media_name,content_type\n# 例: A8.net,https://www.a8.net/,testuser,testpass,ReRe,article\n# 例: もしもアフィリエイト,https://af.moshimo.com/,,,,video\n# 同じASP名で複数行を書くことで、複数メディアの認証情報を登録できます\n# content_typeは article または video を指定してください\n';
     const blob = new Blob([template], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -259,16 +258,15 @@ export function CsvImportClient({ trigger }: CsvImportClientProps) {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="bg-muted p-4 rounded-md font-mono text-sm overflow-x-auto break-all whitespace-pre-wrap">
-                name,login_url,username,password,prompt,media_name,content_type<br />
-                A8.net,https://www.a8.net/,testuser,testpass,A8.netのデータを取得,ReRe,article<br />
-                もしもアフィリエイト,https://af.moshimo.com/,,,もしものデータを取得,,video
+                name,login_url,username,password,media_name,content_type<br />
+                A8.net,https://www.a8.net/,testuser,testpass,ReRe,article<br />
+                もしもアフィリエイト,https://af.moshimo.com/,,,,video
               </div>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                 <li><strong>name</strong> (必須): ASP名</li>
                 <li><strong>login_url</strong> (必須): ログインページのURL</li>
                 <li><strong>username</strong> (任意): ログインユーザー名</li>
                 <li><strong>password</strong> (任意): ログインパスワード</li>
-                <li><strong>prompt</strong> (任意): AI操作プロンプト</li>
                 <li><strong>media_name</strong> (任意): メディア名（例: ReRe, Mortorz）</li>
                 <li><strong>content_type</strong> (任意): コンテンツタイプ（article または video）</li>
               </ul>

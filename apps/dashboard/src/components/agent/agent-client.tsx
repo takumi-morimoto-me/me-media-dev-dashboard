@@ -182,7 +182,6 @@ export function AgentClient() {
               defaultValues={{
                 name: editingAsp.name,
                 login_url: editingAsp.login_url || "",
-                prompt: editingAsp.prompt || "",
                 credentials: editingAsp.credentials.map((cred) => ({
                   media_id: cred.media_id,
                   username_secret_key: cred.username_secret_key || "",
@@ -194,7 +193,6 @@ export function AgentClient() {
                   const result = await updateAsp(editingAsp.id, {
                     name: values.name,
                     login_url: values.login_url,
-                    prompt: values.prompt,
                   });
 
                   if (result.error) {

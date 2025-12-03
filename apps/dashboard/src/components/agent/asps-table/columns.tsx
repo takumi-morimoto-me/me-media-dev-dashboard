@@ -254,27 +254,6 @@ export function getColumns(options?: GetColumnsOptions): ColumnDef<AspWithCreden
       minSize: 160,
       maxSize: 160,
     },
-    // プロンプト
-    {
-      id: "prompt",
-      accessorKey: "prompt",
-      header: "プロンプト",
-      cell: ({ row }) => (
-        <div className="px-2 truncate max-w-[160px]">
-          {row.original.prompt ? (
-            <span className="text-muted-foreground truncate block">
-              {row.original.prompt}
-            </span>
-          ) : (
-            <span className="text-muted-foreground">-</span>
-          )}
-        </div>
-      ),
-      enableSorting: false,
-      size: 160,
-      minSize: 160,
-      maxSize: 160,
-    },
     // reCAPTCHA状況
     {
       id: "recaptcha",

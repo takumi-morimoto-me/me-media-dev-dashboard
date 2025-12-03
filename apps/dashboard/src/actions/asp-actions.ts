@@ -15,7 +15,7 @@ export async function createAsp(values: AspFormValues) {
     };
   }
 
-  const { name, login_url, prompt, credentials } = validatedFields.data;
+  const { name, login_url, credentials } = validatedFields.data;
 
   // 1. aspsテーブルにASP基本情報を挿入
   const { data: aspData, error: aspError } = await supabase
@@ -23,7 +23,6 @@ export async function createAsp(values: AspFormValues) {
     .insert({
       name,
       login_url,
-      prompt,
     })
     .select()
     .single();
@@ -192,7 +191,6 @@ export interface CsvImportRow {
   login_url: string;
   username?: string;
   password?: string;
-  prompt?: string;
   media_name?: string;
   content_type?: string;
 }
@@ -258,7 +256,6 @@ export async function bulkImportAspsFromCsv(rows: CsvImportRow[]): Promise<{ dat
     const aspData = {
       name: firstRow.name.trim(),
       login_url: firstRow.login_url.trim(),
-      prompt: firstRow.prompt?.trim() || null,
     };
 
     // 既存のASPを確認
@@ -286,7 +283,6 @@ export async function bulkImportAspsFromCsv(rows: CsvImportRow[]): Promise<{ dat
         .from("asps")
         .update({
           login_url: aspData.login_url,
-          prompt: aspData.prompt,
         })
         .eq("id", aspId);
 
@@ -436,7 +432,7 @@ export async function exportAspsAsCsv(): Promise<{ data?: string; error?: string
   // ASPと認証情報を取得
   const { data: asps, error: aspsError } = await supabase
     .from("asps")
-    .select("id, name, login_url, prompt")
+    .select("id, name, login_url")
     .order("created_at", { ascending: true });
 
   if (aspsError) {
@@ -453,14 +449,13 @@ export async function exportAspsAsCsv(): Promise<{ data?: string; error?: string
   }
 
   // CSVヘッダー
-  let csvContent = "name,login_url,username,password,prompt,media_name,content_type\n";
+  let csvContent = "name,login_url,username,password,media_name,content_type\n";
 
   // データ行を追加
   if (asps && asps.length > 0) {
     for (const asp of asps) {
       const name = (asp.name || "").replace(/,/g, "，"); // カンマをエスケープ
       const loginUrl = (asp.login_url || "").replace(/,/g, "，");
-      const prompt = (asp.prompt || "").replace(/,/g, "，");
 
       // このASPに紐づく認証情報を取得
       const aspCredentials = credentials?.filter(c => c.asp_id === asp.id) || [];
@@ -475,11 +470,11 @@ export async function exportAspsAsCsv(): Promise<{ data?: string; error?: string
           const password = (cred.password_secret_key || "").replace(/,/g, "，");
           const contentType = ""; // content_typeは現在DBに保存されていないため空
 
-          csvContent += `${name},${loginUrl},${username},${password},${prompt},${mediaName},${contentType}\n`;
+          csvContent += `${name},${loginUrl},${username},${password},${mediaName},${contentType}\n`;
         }
       } else {
         // 認証情報がない場合、基本情報のみ出力
-        csvContent += `${name},${loginUrl},,,${prompt},,\n`;
+        csvContent += `${name},${loginUrl},,,,\n`;
       }
     }
   }

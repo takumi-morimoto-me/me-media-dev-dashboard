@@ -5,7 +5,6 @@ export const w = (units: number) => units * 4
 export const MIN_COLUMN_WIDTH = w(40) // 160px
 export const CHECKBOX_WIDTH = w(10)   // 40px
 export const NAME_MIN_WIDTH = w(80)   // 320px
-export const PROMPT_MIN_WIDTH = w(40) // 160px
 
 // カラム幅の初期値
 export const STATUS_WIDTH = w(20)     // 80px
@@ -18,7 +17,6 @@ export const DEFAULT_COLUMN_SIZES: Record<string, number> = {
   loginUrl: w(40),            // 160px
   username: w(40),            // 160px
   password: w(40),            // 160px
-  prompt: w(40),              // 160px
   recaptcha: w(30),           // 120px
   lastScrape: w(40),          // 160px
 }
@@ -39,7 +37,6 @@ export interface AspWithCredentials {
   id: string
   name: string
   login_url: string | null
-  prompt: string | null
   created_at: string
   updated_at: string | null
   credentials: AspCredential[]
