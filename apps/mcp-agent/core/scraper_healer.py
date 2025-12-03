@@ -5,8 +5,6 @@ from pathlib import Path
 from typing import Optional
 import google.generativeai as genai
 
-from .scraper_generator import ScraperGenerator
-
 logger = logging.getLogger(__name__)
 
 
