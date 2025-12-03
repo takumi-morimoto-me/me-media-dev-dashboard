@@ -58,12 +58,13 @@ CREATE TABLE actuals (
 - **日次データ:** `SupabaseClient.save_daily_actual()` → `daily_actuals`テーブル
 - **月次データ:** `SupabaseClient.save_actual()` または `save_monthly_actual()` → `actuals`テーブル
 
-### シナリオでの指定
+### スクレイパーでの指定
 
-シナリオ（prompt）内でテーブルを指定：
-- 日次データ: `daily_actuals テーブルに保存`
-- 月次データ: `monthly_actuals テーブルに保存`（内部で`actuals`に変換される）
+各スクレイパー（`scrapers/*/scraper.py`）内で保存先テーブルを指定:
+- 日次データ: `save_data(target='daily')`
+- 月次データ: `save_data(target='monthly')`
 
 ## 履歴
 
+- 2025-12-03: シナリオ方式からスクレイパー方式に移行
 - 2025-11-25: 初回設計決定 - 日次・月次データの分離

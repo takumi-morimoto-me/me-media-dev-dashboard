@@ -20,14 +20,14 @@ class SupabaseClient:
         self.client: Client = create_client(url, service_role_key)
         logger.info("Supabase client initialized")
 
-    def get_asp_scenario(self, asp_name: str) -> Optional[Dict[str, Any]]:
-        """Get ASP scenario (prompt) from database.
+    def get_asp_by_name(self, asp_name: str) -> Optional[Dict[str, Any]]:
+        """Get ASP data from database by name.
 
         Args:
             asp_name: Name of the ASP
 
         Returns:
-            ASP data including scenario, or None if not found
+            ASP data, or None if not found
         """
         try:
             response = (
@@ -39,18 +39,18 @@ class SupabaseClient:
             )
 
             if response.data:
-                logger.info(f"Retrieved scenario for ASP: {asp_name}")
+                logger.info(f"Retrieved ASP: {asp_name}")
                 return response.data
             else:
-                logger.warning(f"No scenario found for ASP: {asp_name}")
+                logger.warning(f"ASP not found: {asp_name}")
                 return None
 
         except Exception as e:
-            logger.error(f"Error retrieving ASP scenario: {e}")
+            logger.error(f"Error retrieving ASP: {e}")
             return None
 
     def get_all_asps(self) -> List[Dict[str, Any]]:
-        """Get all ASPs that have scenarios defined.
+        """Get all active ASPs.
 
         Returns:
             List of ASP data dictionaries
@@ -59,11 +59,11 @@ class SupabaseClient:
             response = (
                 self.client.table("asps")
                 .select("*")
-                .not_.is_("prompt", "null")
+                .eq("is_active", True)
                 .execute()
             )
 
-            logger.info(f"Retrieved {len(response.data)} ASPs with scenarios")
+            logger.info(f"Retrieved {len(response.data)} active ASPs")
             return response.data
 
         except Exception as e:
